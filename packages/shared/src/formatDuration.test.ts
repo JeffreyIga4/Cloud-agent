@@ -14,6 +14,3 @@ describe('formatDuration', () => {
     expect(formatDuration(1000)).toBe('1s');
   });
 });
-
-
-
