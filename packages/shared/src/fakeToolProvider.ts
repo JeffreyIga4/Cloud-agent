@@ -13,10 +13,10 @@ export class FakeToolProvider implements ToolProvider {
     ];
   }
 
-    async callTool(name: string, args: unknown): Promise<unknown> {
-        if (name === 'ping') {
-            return 'pong';
-        }
-        throw new Error(`Unknown tool: ${name}`);
+  async callTool(name: string, args: unknown): Promise<unknown> {
+    if (name === 'ping') {
+      return 'pong';
     }
+    throw new Error(`Unknown tool: ${name}`);
+  }
 }
