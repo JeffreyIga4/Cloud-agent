@@ -1,0 +1,9 @@
+{
+    "name": "@cloud-agent/agent-core",
+    "private": true,
+    "type": "module",
+    "main": "./src/index.ts",
+    "dependencies": {
+        "@cloud-agent/shared": "workspace:*"
+    }
+}

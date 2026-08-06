@@ -1,0 +1,6 @@
+{
+    "name": "@cloud-agent/shared",
+    "private": true,
+    "type": "module",
+    "main": "./src/index.ts"
+}

@@ -236,6 +236,14 @@ importers:
         specifier: ^4.1.10
         version: 4.1.10(@types/node@26.1.2)(vite@8.2.0(@types/node@26.1.2))
 
+  packages/agent-core:
+    dependencies:
+      '@cloud-agent/shared':
+        specifier: workspace:*
+        version: link:../shared
+
+  packages/shared: {}
+
 packages:
 
   '@emnapi/core@2.0.0-alpha.3':
