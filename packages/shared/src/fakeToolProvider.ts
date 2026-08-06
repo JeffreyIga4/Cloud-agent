@@ -13,7 +13,7 @@ export class FakeToolProvider implements ToolProvider {
     ];
   }
 
-  async callTool(name: string, args: unknown): Promise<unknown> {
+  async callTool(name: string, _args: unknown): Promise<unknown> {
     if (name === 'ping') {
       return 'pong';
     }
