@@ -1,0 +1,10 @@
+{
+  "name": "@cloud-agent/mcp-github",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "dependencies": {
+    "@cloud-agent/shared": "workspace:*",
+    "octokit": "^5.0.5"
+  }
+}
