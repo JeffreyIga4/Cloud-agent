@@ -1,8 +1,14 @@
 import { loadConfig } from '@cloud-agent/shared';
 import { GitHubToolProvider } from './githubToolProvider.js';
+import { Octokit } from 'octokit';
 
 const config = loadConfig();
-const provider = new GitHubToolProvider(config.GITHUB_TOKEN);
+const octokit = new Octokit({ auth: config.GITHUB_TOKEN });
+const provider = new GitHubToolProvider(octokit);
 
-const result = await provider.callTool('listPullRequests', { owner: 'JeffreyIga4', repo: 'Cloud-agent', state: 'all' });
+const result = await provider.callTool('listPullRequests', {
+  owner: 'JeffreyIga4',
+  repo: 'Cloud-agent',
+  state: 'all',
+});
 console.log(result);
