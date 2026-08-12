@@ -8,6 +8,11 @@ const listPullRequestsSchema = z.object({
   state: z.enum(['open', 'closed', 'all']).optional(),
 });
 
+const listCommitsSchema = z.object({
+  owner: z.string(),
+  repo: z.string(),
+});
+
 export class GitHubToolProvider implements ToolProvider {
   private octokit: Octokit;
 
@@ -26,6 +31,14 @@ export class GitHubToolProvider implements ToolProvider {
           z.object({ number: z.number(), title: z.string(), state: z.string() }),
         ),
       },
+      {
+        name: 'listCommits',
+        description: 'List commits for a GitHub repository',
+        inputSchema: listCommitsSchema,
+        outputSchema: z.array(
+          z.object({ sha: z.string(), message: z.string(), author: z.string().optional() }),
+        ),
+      },
     ];
   }
 
@@ -36,7 +49,18 @@ export class GitHubToolProvider implements ToolProvider {
       // Use the Octokit instance to list pull requests for the specified repository
       const response = await this.octokit.rest.pulls.list({ owner, repo, state });
       return response.data.map((pr) => ({ number: pr.number, title: pr.title, state: pr.state }));
+    } else if (name === 'listCommits') {
+      // Use the Octokit instance to list commits for the specified repository
+      const { owner, repo } = listCommitsSchema.parse(args);
+      const response = await this.octokit.rest.repos.listCommits({ owner, repo });
+      // Map the response data to the expected output format
+      return response.data.map((commit) => ({
+        sha: commit.sha,
+        message: commit.commit.message,
+        author: commit.author?.login,
+      }));
+    } else {
+      throw new Error(`Unknown tool: ${name}`);
     }
-    throw new Error(`Unknown tool: ${name}`);
   }
 }

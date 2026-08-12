@@ -12,3 +12,9 @@ const result = await provider.callTool('listPullRequests', {
   state: 'all',
 });
 console.log(result);
+
+const commitsResult = await provider.callTool('listCommits', {
+  owner: 'JeffreyIga4',
+  repo: 'Cloud-agent',
+});
+console.log(commitsResult);
