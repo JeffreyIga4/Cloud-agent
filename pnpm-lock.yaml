@@ -239,6 +239,21 @@ importers:
         specifier: ^4.1.10
         version: 4.1.10(@types/node@26.1.2)(vite@8.2.0(@types/node@26.1.2)(esbuild@0.28.1)(tsx@4.23.10))
 
+  apps/cli:
+    dependencies:
+      '@cloud-agent/agent-core':
+        specifier: workspace:*
+        version: link:../../packages/agent-core
+      '@cloud-agent/mcp-github':
+        specifier: workspace:*
+        version: link:../../packages/mcp-github
+      '@cloud-agent/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
+      octokit:
+        specifier: ^5.0.5
+        version: 5.0.5
+
   packages/agent-core:
     dependencies:
       '@cloud-agent/shared':
