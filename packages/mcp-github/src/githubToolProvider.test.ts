@@ -84,4 +84,26 @@ describe('GitHubToolProvider', () => {
       updatedAt: '2026-01-01T00:00:00Z',
     });
   });
+
+  it('lists files in a repository directory using the injected Octokit client', async () => {
+    const fakeOctokit = {
+      rest: {
+        repos: {
+          getContent: vi.fn().mockResolvedValue({
+            data: [
+              { name: 'index.ts', path: 'src/index.ts', type: 'file' },
+              { name: 'utils', path: 'src/utils', type: 'dir' },
+            ],
+          }),
+        },
+      },
+    } as unknown as Octokit;
+
+    const provider = new GitHubToolProvider(fakeOctokit);
+    const result = await provider.callTool('github.list_files', { owner: 'test', repo: 'test', path: 'src' });
+    expect(result).toEqual([
+      { name: 'index.ts', path: 'src/index.ts', type: 'file' },
+      { name: 'utils', path: 'src/utils', type: 'dir' },
+    ]);
+  });
 });

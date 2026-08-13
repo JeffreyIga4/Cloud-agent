@@ -21,3 +21,6 @@ console.log(commitsResult);
 
 const repoResult = await provider.callTool('github.get_repository', { owner: 'JeffreyIga4', repo: 'Cloud-agent' });
 console.log(repoResult);
+
+const filesResult = await provider.callTool('github.list_files', { owner: 'JeffreyIga4', repo: 'Cloud-agent', path: '' });
+console.log(filesResult);

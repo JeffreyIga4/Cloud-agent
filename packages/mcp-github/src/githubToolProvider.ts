@@ -24,6 +24,21 @@ const getRepositoryOutputSchema = z.object({
   updatedAt: z.string(),
 });
 
+const listFilesSchema = z.object({
+  owner: z.string(),
+  repo: z.string(),
+  path: z.string(),
+  branch: z.string().optional(),
+});
+
+const listFilesOutputSchema = z.array(
+  z.object({
+    name: z.string(),
+    path: z.string(),
+    type: z.string(),
+  })
+);
+
 const listCommitsSchema = z.object({
   owner: z.string(),
   repo: z.string(),
@@ -61,6 +76,13 @@ export class GitHubToolProvider implements ToolProvider {
         inputSchema: getRepositorySchema,
         outputSchema: getRepositoryOutputSchema,
       },
+
+      {
+        name: 'github.list_files',
+        description: 'List files in a GitHub repository at a specific path',
+        inputSchema: listFilesSchema,
+        outputSchema: listFilesOutputSchema,
+      }
     ];
   }
 
@@ -95,6 +117,14 @@ export class GitHubToolProvider implements ToolProvider {
         stars: response.data.stargazers_count,
         updatedAt: response.data.updated_at,
       };
+    }
+    else if (name === 'github.list_files') {
+      const { owner, repo, path, branch } = listFilesSchema.parse(args);
+      const response = await this.octokit.rest.repos.getContent({ owner, repo, path, ref: branch });
+      if (!Array.isArray(response.data)) {
+        throw new Error(`Path "${path}" is a file, not a directory`);
+      }
+      return response.data.map((entry) => ({ name: entry.name, path: entry.path, type: entry.type }));
     }
     else {
       throw new Error(`Unknown tool: ${name}`);
