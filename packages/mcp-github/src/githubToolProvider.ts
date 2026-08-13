@@ -36,8 +36,22 @@ const listFilesOutputSchema = z.array(
     name: z.string(),
     path: z.string(),
     type: z.string(),
-  })
+  }),
 );
+
+const getFileSchema = z.object({
+  owner: z.string(),
+  repo: z.string(),
+  path: z.string(),
+  branch: z.string().optional(),
+});
+
+const getFileOutputSchema = z.object({
+  contents: z.string(),
+  path: z.string(),
+  branch: z.string().optional(),
+  sha: z.string(),
+});
 
 const listCommitsSchema = z.object({
   owner: z.string(),
@@ -82,7 +96,14 @@ export class GitHubToolProvider implements ToolProvider {
         description: 'List files in a GitHub repository at a specific path',
         inputSchema: listFilesSchema,
         outputSchema: listFilesOutputSchema,
-      }
+      },
+
+      {
+        name: 'github.get_file',
+        description: 'Get the contents of a file in a GitHub repository',
+        inputSchema: getFileSchema,
+        outputSchema: getFileOutputSchema,
+      },
     ];
   }
 
@@ -103,8 +124,7 @@ export class GitHubToolProvider implements ToolProvider {
         message: commit.commit.message,
         author: commit.author?.login,
       }));
-    } 
-    else if (name === 'github.get_repository') {
+    } else if (name === 'github.get_repository') {
       const { owner, repo } = getRepositorySchema.parse(args);
       const response = await this.octokit.rest.repos.get({ owner, repo });
       return {
@@ -117,16 +137,33 @@ export class GitHubToolProvider implements ToolProvider {
         stars: response.data.stargazers_count,
         updatedAt: response.data.updated_at,
       };
-    }
-    else if (name === 'github.list_files') {
+    } else if (name === 'github.list_files') {
       const { owner, repo, path, branch } = listFilesSchema.parse(args);
       const response = await this.octokit.rest.repos.getContent({ owner, repo, path, ref: branch });
       if (!Array.isArray(response.data)) {
         throw new Error(`Path "${path}" is a file, not a directory`);
       }
-      return response.data.map((entry) => ({ name: entry.name, path: entry.path, type: entry.type }));
-    }
-    else {
+      return response.data.map((entry) => ({
+        name: entry.name,
+        path: entry.path,
+        type: entry.type,
+      }));
+    } else if (name === 'github.get_file') {
+      const { owner, repo, path, branch } = getFileSchema.parse(args);
+      const response = await this.octokit.rest.repos.getContent({ owner, repo, path, ref: branch });
+      if (Array.isArray(response.data)) {
+        throw new Error(`Path "${path}" is a directory, not a file`);
+      }
+      if (response.data.type !== 'file') {
+        throw new Error(`Path "${path}" is not a file`);
+      }
+      return {
+        contents: Buffer.from(response.data.content, 'base64').toString('utf-8'),
+        path: response.data.path,
+        branch,
+        sha: response.data.sha,
+      };
+    } else {
       throw new Error(`Unknown tool: ${name}`);
     }
   }

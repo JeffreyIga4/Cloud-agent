@@ -72,7 +72,10 @@ describe('GitHubToolProvider', () => {
       },
     } as unknown as Octokit;
     const provider = new GitHubToolProvider(fakeOctokit);
-    const result = await provider.callTool('github.get_repository', { owner: 'test', repo: 'test-repo' });
+    const result = await provider.callTool('github.get_repository', {
+      owner: 'test',
+      repo: 'test-repo',
+    });
     expect(result).toEqual({
       name: 'test-repo',
       description: 'A test repository',
@@ -100,10 +103,40 @@ describe('GitHubToolProvider', () => {
     } as unknown as Octokit;
 
     const provider = new GitHubToolProvider(fakeOctokit);
-    const result = await provider.callTool('github.list_files', { owner: 'test', repo: 'test', path: 'src' });
+    const result = await provider.callTool('github.list_files', {
+      owner: 'test',
+      repo: 'test',
+      path: 'src',
+    });
     expect(result).toEqual([
       { name: 'index.ts', path: 'src/index.ts', type: 'file' },
       { name: 'utils', path: 'src/utils', type: 'dir' },
     ]);
+  });
+
+  it('gets file contents using the injected Octokit client', async () => {
+    const fakeOctokit = {
+      rest: {
+        repos: {
+          getContent: vi.fn().mockResolvedValue({
+            data: {
+              type: 'file',
+              path: 'README.md',
+              content: 'aGVsbG8gd29ybGQ=',
+              sha: 'abc123',
+            },
+          }),
+        },
+      },
+    } as unknown as Octokit;
+
+    const provider = new GitHubToolProvider(fakeOctokit);
+    const result = await provider.callTool('github.get_file', { owner: 'test', repo: 'test', path: 'README.md' });
+    expect(result).toEqual({
+      contents: 'hello world',
+      path: 'README.md',
+      branch: undefined,
+      sha: 'abc123',
+    });
   });
 });
