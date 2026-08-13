@@ -58,6 +58,29 @@ const listCommitsSchema = z.object({
   repo: z.string(),
 });
 
+const getCommitSchema = z.object({
+  owner: z.string(),
+  repo: z.string(),
+  sha: z.string(),
+});
+
+const getCommitOutputSchema = z.object({
+  sha: z.string(),
+  message: z.string(),
+  author: z.string().optional(),
+  additions: z.number(),
+  deletions: z.number(),
+  files: z.array(
+    z.object({
+      filename: z.string(),
+      status: z.string(),
+      additions: z.number(),
+      deletions: z.number(),
+      patch: z.string().optional(),
+    }),
+  ),
+});
+
 export class GitHubToolProvider implements ToolProvider {
   private octokit: Octokit;
 
@@ -103,6 +126,12 @@ export class GitHubToolProvider implements ToolProvider {
         description: 'Get the contents of a file in a GitHub repository',
         inputSchema: getFileSchema,
         outputSchema: getFileOutputSchema,
+      },
+      {
+        name: 'github.get_commit',
+        description: 'Get details of a specific commit in a GitHub repository',
+        inputSchema: getCommitSchema,
+        outputSchema: getCommitOutputSchema,
       },
     ];
   }
@@ -162,6 +191,23 @@ export class GitHubToolProvider implements ToolProvider {
         path: response.data.path,
         branch,
         sha: response.data.sha,
+      };
+    } else if (name === 'github.get_commit') {
+      const { owner, repo, sha } = getCommitSchema.parse(args);
+      const response = await this.octokit.rest.repos.getCommit({ owner, repo, ref: sha });
+      return {
+        sha: response.data.sha,
+        message: response.data.commit.message,
+        author: response.data.author?.login,
+        additions: response.data.stats?.additions ?? 0,
+        deletions: response.data.stats?.deletions ?? 0,
+        files: (response.data.files ?? []).map((file) => ({
+          filename: file.filename,
+          status: file.status,
+          additions: file.additions,
+          deletions: file.deletions,
+          patch: file.patch,
+        })),
       };
     } else {
       throw new Error(`Unknown tool: ${name}`);

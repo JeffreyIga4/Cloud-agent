@@ -131,12 +131,47 @@ describe('GitHubToolProvider', () => {
     } as unknown as Octokit;
 
     const provider = new GitHubToolProvider(fakeOctokit);
-    const result = await provider.callTool('github.get_file', { owner: 'test', repo: 'test', path: 'README.md' });
+    const result = await provider.callTool('github.get_file', {
+      owner: 'test',
+      repo: 'test',
+      path: 'README.md',
+    });
     expect(result).toEqual({
       contents: 'hello world',
       path: 'README.md',
       branch: undefined,
       sha: 'abc123',
+    });
+  });
+
+  it('gets commit details using the injected Octokit client', async () => {
+    const fakeOctokit = {
+      rest: {
+        repos: {
+          getCommit: vi.fn().mockResolvedValue({
+            data: {
+              sha: 'abc123',
+              commit: { message: 'Fix bug' },
+              author: { login: 'testuser' },
+              stats: { additions: 10, deletions: 3 },
+              files: [
+                { filename: 'src/index.ts', status: 'modified', additions: 8, deletions: 2, patch: '@@ ... @@' },
+              ],
+            },
+          }),
+        },
+      },
+    } as unknown as Octokit;
+
+    const provider = new GitHubToolProvider(fakeOctokit);
+    const result = await provider.callTool('github.get_commit', { owner: 'test', repo: 'test', sha: 'abc123' });
+    expect(result).toEqual({
+      sha: 'abc123',
+      message: 'Fix bug',
+      author: 'testuser',
+      additions: 10,
+      deletions: 3,
+      files: [{ filename: 'src/index.ts', status: 'modified', additions: 8, deletions: 2, patch: '@@ ... @@' }],
     });
   });
 });

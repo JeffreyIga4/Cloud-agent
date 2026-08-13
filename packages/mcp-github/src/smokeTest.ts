@@ -32,5 +32,12 @@ const filesResult = await provider.callTool('github.list_files', {
 });
 console.log(filesResult);
 
-const fileResult = await provider.callTool('github.get_file', { owner: 'JeffreyIga4', repo: 'Cloud-agent', path: 'package.json' });
+const fileResult = await provider.callTool('github.get_file', {
+  owner: 'JeffreyIga4',
+  repo: 'Cloud-agent',
+  path: 'package.json',
+});
 console.log(fileResult);
+
+const commitResult = await provider.callTool('github.get_commit', { owner: 'JeffreyIga4', repo: 'Cloud-agent', sha: '2cf81ac8e18ffdab15f89872cd3979fbda9ecd67' });
+console.log(commitResult);
