@@ -72,7 +72,10 @@ describe('GitHubToolProvider', () => {
       },
     } as unknown as Octokit;
     const provider = new GitHubToolProvider(fakeOctokit);
-    const result = await provider.callTool('github.get_repository', { owner: 'test', repo: 'test-repo' });
+    const result = await provider.callTool('github.get_repository', {
+      owner: 'test',
+      repo: 'test-repo',
+    });
     expect(result).toEqual({
       name: 'test-repo',
       description: 'A test repository',
@@ -82,6 +85,154 @@ describe('GitHubToolProvider', () => {
       language: 'TypeScript',
       stars: 5,
       updatedAt: '2026-01-01T00:00:00Z',
+    });
+  });
+
+  it('lists files in a repository directory using the injected Octokit client', async () => {
+    const fakeOctokit = {
+      rest: {
+        repos: {
+          getContent: vi.fn().mockResolvedValue({
+            data: [
+              { name: 'index.ts', path: 'src/index.ts', type: 'file' },
+              { name: 'utils', path: 'src/utils', type: 'dir' },
+            ],
+          }),
+        },
+      },
+    } as unknown as Octokit;
+
+    const provider = new GitHubToolProvider(fakeOctokit);
+    const result = await provider.callTool('github.list_files', {
+      owner: 'test',
+      repo: 'test',
+      path: 'src',
+    });
+    expect(result).toEqual([
+      { name: 'index.ts', path: 'src/index.ts', type: 'file' },
+      { name: 'utils', path: 'src/utils', type: 'dir' },
+    ]);
+  });
+
+  it('gets file contents using the injected Octokit client', async () => {
+    const fakeOctokit = {
+      rest: {
+        repos: {
+          getContent: vi.fn().mockResolvedValue({
+            data: {
+              type: 'file',
+              path: 'README.md',
+              content: 'aGVsbG8gd29ybGQ=',
+              sha: 'abc123',
+            },
+          }),
+        },
+      },
+    } as unknown as Octokit;
+
+    const provider = new GitHubToolProvider(fakeOctokit);
+    const result = await provider.callTool('github.get_file', {
+      owner: 'test',
+      repo: 'test',
+      path: 'README.md',
+    });
+    expect(result).toEqual({
+      contents: 'hello world',
+      path: 'README.md',
+      branch: undefined,
+      sha: 'abc123',
+    });
+  });
+
+  it('gets commit details using the injected Octokit client', async () => {
+    const fakeOctokit = {
+      rest: {
+        repos: {
+          getCommit: vi.fn().mockResolvedValue({
+            data: {
+              sha: 'abc123',
+              commit: { message: 'Fix bug' },
+              author: { login: 'testuser' },
+              stats: { additions: 10, deletions: 3 },
+              files: [
+                {
+                  filename: 'src/index.ts',
+                  status: 'modified',
+                  additions: 8,
+                  deletions: 2,
+                  patch: '@@ ... @@',
+                },
+              ],
+            },
+          }),
+        },
+      },
+    } as unknown as Octokit;
+
+    const provider = new GitHubToolProvider(fakeOctokit);
+    const result = await provider.callTool('github.get_commit', {
+      owner: 'test',
+      repo: 'test',
+      sha: 'abc123',
+    });
+    expect(result).toEqual({
+      sha: 'abc123',
+      message: 'Fix bug',
+      author: 'testuser',
+      additions: 10,
+      deletions: 3,
+      files: [
+        {
+          filename: 'src/index.ts',
+          status: 'modified',
+          additions: 8,
+          deletions: 2,
+          patch: '@@ ... @@',
+        },
+      ],
+    });
+  });
+  it('gets pull request details using the injected Octokit client', async () => {
+    const fakeOctokit = {
+      rest: {
+        pulls: {
+          get: vi.fn().mockResolvedValue({
+            data: {
+              number: 42,
+              title: 'Add feature',
+              state: 'open',
+              body: 'This PR adds a feature',
+              user: { login: 'testuser' },
+              base: { ref: 'main' },
+              head: { ref: 'feature-branch' },
+              merged: false,
+              mergeable: true,
+              commits: 3,
+              changed_files: 5,
+              additions: 100,
+              deletions: 20,
+            },
+          }),
+        },
+      },
+    } as unknown as Octokit;
+
+    const provider = new GitHubToolProvider(fakeOctokit);
+    const result = await provider.callTool('github.get_pull_request', { owner: 'test', repo: 'test', pullNumber: 42 });
+    expect(result).toEqual({
+      number: 42,
+      title: 'Add feature',
+      state: 'open',
+      description: 'This PR adds a feature',
+      author: 'testuser',
+      baseBranch: 'main',
+      headBranch: 'feature-branch',
+      merged: false,
+      mergeable: true,
+      commits: 3,
+      changedFiles: 5,
+      additions: 100,
+      deletions: 20,
     });
   });
 });

@@ -24,9 +24,83 @@ const getRepositoryOutputSchema = z.object({
   updatedAt: z.string(),
 });
 
+const listFilesSchema = z.object({
+  owner: z.string(),
+  repo: z.string(),
+  path: z.string(),
+  branch: z.string().optional(),
+});
+
+const listFilesOutputSchema = z.array(
+  z.object({
+    name: z.string(),
+    path: z.string(),
+    type: z.string(),
+  }),
+);
+
+const getFileSchema = z.object({
+  owner: z.string(),
+  repo: z.string(),
+  path: z.string(),
+  branch: z.string().optional(),
+});
+
+const getFileOutputSchema = z.object({
+  contents: z.string(),
+  path: z.string(),
+  branch: z.string().optional(),
+  sha: z.string(),
+});
+
 const listCommitsSchema = z.object({
   owner: z.string(),
   repo: z.string(),
+});
+
+const getCommitSchema = z.object({
+  owner: z.string(),
+  repo: z.string(),
+  sha: z.string(),
+});
+
+const getCommitOutputSchema = z.object({
+  sha: z.string(),
+  message: z.string(),
+  author: z.string().optional(),
+  additions: z.number(),
+  deletions: z.number(),
+  files: z.array(
+    z.object({
+      filename: z.string(),
+      status: z.string(),
+      additions: z.number(),
+      deletions: z.number(),
+      patch: z.string().optional(),
+    }),
+  ),
+});
+
+const getPullRequestSchema = z.object({
+  owner: z.string(),
+  repo: z.string(),
+  pullNumber: z.number(),
+});
+
+const getPullRequestOutputSchema = z.object({
+  number: z.number(),
+  title: z.string(),
+  state: z.string(),
+  description: z.string().nullable(),
+  author: z.string().optional(),
+  baseBranch: z.string(),
+  headBranch: z.string(),
+  merged: z.boolean(),
+  mergeable: z.boolean().nullable(),
+  commits: z.number(),
+  changedFiles: z.number(),
+  additions: z.number(),
+  deletions: z.number(),
 });
 
 export class GitHubToolProvider implements ToolProvider {
@@ -61,6 +135,32 @@ export class GitHubToolProvider implements ToolProvider {
         inputSchema: getRepositorySchema,
         outputSchema: getRepositoryOutputSchema,
       },
+
+      {
+        name: 'github.list_files',
+        description: 'List files in a GitHub repository at a specific path',
+        inputSchema: listFilesSchema,
+        outputSchema: listFilesOutputSchema,
+      },
+
+      {
+        name: 'github.get_file',
+        description: 'Get the contents of a file in a GitHub repository',
+        inputSchema: getFileSchema,
+        outputSchema: getFileOutputSchema,
+      },
+      {
+        name: 'github.get_commit',
+        description: 'Get details of a specific commit in a GitHub repository',
+        inputSchema: getCommitSchema,
+        outputSchema: getCommitOutputSchema,
+      },
+      {
+        name: 'github.get_pull_request',
+        description: 'Get details of a specific pull request in a GitHub repository',
+        inputSchema: getPullRequestSchema,
+        outputSchema: getPullRequestOutputSchema,
+      },
     ];
   }
 
@@ -81,10 +181,10 @@ export class GitHubToolProvider implements ToolProvider {
         message: commit.commit.message,
         author: commit.author?.login,
       }));
-    } 
-    else if (name === 'github.get_repository') {
+    } else if (name === 'github.get_repository') {
       const { owner, repo } = getRepositorySchema.parse(args);
       const response = await this.octokit.rest.repos.get({ owner, repo });
+      // Map the response data to the expected output format
       return {
         name: response.data.name,
         description: response.data.description,
@@ -95,8 +195,71 @@ export class GitHubToolProvider implements ToolProvider {
         stars: response.data.stargazers_count,
         updatedAt: response.data.updated_at,
       };
-    }
-    else {
+    } else if (name === 'github.list_files') {
+      const { owner, repo, path, branch } = listFilesSchema.parse(args);
+      const response = await this.octokit.rest.repos.getContent({ owner, repo, path, ref: branch });
+      // Check if the response data is an array (indicating a directory)
+      if (!Array.isArray(response.data)) {
+        throw new Error(`Path "${path}" is a file, not a directory`);
+      }
+      return response.data.map((entry) => ({
+        name: entry.name,
+        path: entry.path,
+        type: entry.type,
+      }));
+    } else if (name === 'github.get_file') {
+      const { owner, repo, path, branch } = getFileSchema.parse(args);
+      const response = await this.octokit.rest.repos.getContent({ owner, repo, path, ref: branch });
+      // Check if the response data is an array (indicating a directory)
+      if (Array.isArray(response.data)) {
+        throw new Error(`Path "${path}" is a directory, not a file`);
+      }
+      if (response.data.type !== 'file') {
+        throw new Error(`Path "${path}" is not a file`);
+      }
+      return {
+        // Decode the base64-encoded content of the file
+        contents: Buffer.from(response.data.content, 'base64').toString('utf-8'),
+        path: response.data.path,
+        branch,
+        sha: response.data.sha,
+      };
+    } else if (name === 'github.get_commit') {
+      const { owner, repo, sha } = getCommitSchema.parse(args);
+      const response = await this.octokit.rest.repos.getCommit({ owner, repo, ref: sha });
+      return {
+        sha: response.data.sha,
+        message: response.data.commit.message,
+        author: response.data.author?.login,
+        additions: response.data.stats?.additions ?? 0,
+        deletions: response.data.stats?.deletions ?? 0,
+        files: (response.data.files ?? []).map((file) => ({
+          filename: file.filename,
+          status: file.status,
+          additions: file.additions,
+          deletions: file.deletions,
+          patch: file.patch,
+        })),
+      };
+    } else if (name === 'github.get_pull_request') {
+      const { owner, repo, pullNumber } = getPullRequestSchema.parse(args);
+      const response = await this.octokit.rest.pulls.get({ owner, repo, pull_number: pullNumber });
+      return {
+        number: response.data.number,
+        title: response.data.title,
+        state: response.data.state,
+        description: response.data.body,
+        author: response.data.user?.login,
+        baseBranch: response.data.base.ref,
+        headBranch: response.data.head.ref,
+        merged: response.data.merged,
+        mergeable: response.data.mergeable,
+        commits: response.data.commits,
+        changedFiles: response.data.changed_files,
+        additions: response.data.additions,
+        deletions: response.data.deletions,
+      };
+    } else {
       throw new Error(`Unknown tool: ${name}`);
     }
   }
