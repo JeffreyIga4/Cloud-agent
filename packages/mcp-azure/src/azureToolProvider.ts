@@ -17,7 +17,7 @@ export class AzureToolProvider implements ToolProvider {
   async listTools(): Promise<Tool[]> {
     return [
       {
-        name: 'listResourceGroups',
+        name: 'azure.list_resource_groups',
         description: 'List resource groups in the Azure subscription',
         inputSchema: listResourceGroupsSchema,
         outputSchema: listResourceGroupsOutputSchema,
@@ -26,7 +26,7 @@ export class AzureToolProvider implements ToolProvider {
   }
 
   async callTool(name: string, args: unknown): Promise<unknown> {
-    if (name === 'listResourceGroups') {
+    if (name === 'azure.list_resource_groups') {
       listResourceGroupsSchema.parse(args);
       const groups: { name: string; location: string }[] = [];
 

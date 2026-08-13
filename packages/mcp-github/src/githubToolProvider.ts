@@ -24,7 +24,7 @@ export class GitHubToolProvider implements ToolProvider {
   async listTools(): Promise<Tool[]> {
     return [
       {
-        name: 'listPullRequests',
+        name: 'github.list_pull_requests',
         description: 'List pull requests for a GitHub repository',
         inputSchema: listPullRequestsSchema,
         outputSchema: z.array(
@@ -32,7 +32,7 @@ export class GitHubToolProvider implements ToolProvider {
         ),
       },
       {
-        name: 'listCommits',
+        name: 'github.list_commits',
         description: 'List commits for a GitHub repository',
         inputSchema: listCommitsSchema,
         outputSchema: z.array(
@@ -43,13 +43,13 @@ export class GitHubToolProvider implements ToolProvider {
   }
 
   async callTool(name: string, args: unknown): Promise<unknown> {
-    // Check if the tool name is 'listPullRequests' and validate the input arguments
-    if (name === 'listPullRequests') {
+    // Check if the tool name is 'github.list_pull_requests' and validate the input arguments
+    if (name === 'github.list_pull_requests') {
       const { owner, repo, state } = listPullRequestsSchema.parse(args);
       // Use the Octokit instance to list pull requests for the specified repository
       const response = await this.octokit.rest.pulls.list({ owner, repo, state });
       return response.data.map((pr) => ({ number: pr.number, title: pr.title, state: pr.state }));
-    } else if (name === 'listCommits') {
+    } else if (name === 'github.list_commits') {
       // Use the Octokit instance to list commits for the specified repository
       const { owner, repo } = listCommitsSchema.parse(args);
       const response = await this.octokit.rest.repos.listCommits({ owner, repo });

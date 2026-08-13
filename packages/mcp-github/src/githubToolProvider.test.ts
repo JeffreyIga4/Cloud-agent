@@ -22,7 +22,10 @@ describe('GitHubToolProvider', () => {
     } as unknown as Octokit;
 
     const provider = new GitHubToolProvider(fakeOctokit);
-    const result = await provider.callTool('listPullRequests', { owner: 'test', repo: 'test' });
+    const result = await provider.callTool('github.list_pull_requests', {
+      owner: 'test',
+      repo: 'test',
+    });
     expect(result).toEqual([{ number: 1, title: 'Test PR', state: 'open' }]);
   });
 
@@ -45,7 +48,7 @@ describe('GitHubToolProvider', () => {
     } as unknown as Octokit;
 
     const provider = new GitHubToolProvider(fakeOctokit);
-    const result = await provider.callTool('listCommits', { owner: 'test', repo: 'test' });
+    const result = await provider.callTool('github.list_commits', { owner: 'test', repo: 'test' });
     expect(result).toEqual([{ sha: 'abc123', message: 'Initial commit', author: 'testuser' }]);
   });
 });

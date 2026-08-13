@@ -13,5 +13,5 @@ const credential = new ClientSecretCredential(
 
 const resourceClient = new ResourceManagementClient(credential, config.AZURE_SUBSCRIPTION_ID);
 const provider = new AzureToolProvider(resourceClient);
-const result = await provider.callTool('listResourceGroups', {});
+const result = await provider.callTool('azure.list_resource_groups', {});
 console.log(result);
