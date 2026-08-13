@@ -155,7 +155,13 @@ describe('GitHubToolProvider', () => {
               author: { login: 'testuser' },
               stats: { additions: 10, deletions: 3 },
               files: [
-                { filename: 'src/index.ts', status: 'modified', additions: 8, deletions: 2, patch: '@@ ... @@' },
+                {
+                  filename: 'src/index.ts',
+                  status: 'modified',
+                  additions: 8,
+                  deletions: 2,
+                  patch: '@@ ... @@',
+                },
               ],
             },
           }),
@@ -164,14 +170,69 @@ describe('GitHubToolProvider', () => {
     } as unknown as Octokit;
 
     const provider = new GitHubToolProvider(fakeOctokit);
-    const result = await provider.callTool('github.get_commit', { owner: 'test', repo: 'test', sha: 'abc123' });
+    const result = await provider.callTool('github.get_commit', {
+      owner: 'test',
+      repo: 'test',
+      sha: 'abc123',
+    });
     expect(result).toEqual({
       sha: 'abc123',
       message: 'Fix bug',
       author: 'testuser',
       additions: 10,
       deletions: 3,
-      files: [{ filename: 'src/index.ts', status: 'modified', additions: 8, deletions: 2, patch: '@@ ... @@' }],
+      files: [
+        {
+          filename: 'src/index.ts',
+          status: 'modified',
+          additions: 8,
+          deletions: 2,
+          patch: '@@ ... @@',
+        },
+      ],
+    });
+  });
+  it('gets pull request details using the injected Octokit client', async () => {
+    const fakeOctokit = {
+      rest: {
+        pulls: {
+          get: vi.fn().mockResolvedValue({
+            data: {
+              number: 42,
+              title: 'Add feature',
+              state: 'open',
+              body: 'This PR adds a feature',
+              user: { login: 'testuser' },
+              base: { ref: 'main' },
+              head: { ref: 'feature-branch' },
+              merged: false,
+              mergeable: true,
+              commits: 3,
+              changed_files: 5,
+              additions: 100,
+              deletions: 20,
+            },
+          }),
+        },
+      },
+    } as unknown as Octokit;
+
+    const provider = new GitHubToolProvider(fakeOctokit);
+    const result = await provider.callTool('github.get_pull_request', { owner: 'test', repo: 'test', pullNumber: 42 });
+    expect(result).toEqual({
+      number: 42,
+      title: 'Add feature',
+      state: 'open',
+      description: 'This PR adds a feature',
+      author: 'testuser',
+      baseBranch: 'main',
+      headBranch: 'feature-branch',
+      merged: false,
+      mergeable: true,
+      commits: 3,
+      changedFiles: 5,
+      additions: 100,
+      deletions: 20,
     });
   });
 });

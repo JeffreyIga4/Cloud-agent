@@ -81,6 +81,28 @@ const getCommitOutputSchema = z.object({
   ),
 });
 
+const getPullRequestSchema = z.object({
+  owner: z.string(),
+  repo: z.string(),
+  pullNumber: z.number(),
+});
+
+const getPullRequestOutputSchema = z.object({
+  number: z.number(),
+  title: z.string(),
+  state: z.string(),
+  description: z.string().nullable(),
+  author: z.string().optional(),
+  baseBranch: z.string(),
+  headBranch: z.string(),
+  merged: z.boolean(),
+  mergeable: z.boolean().nullable(),
+  commits: z.number(),
+  changedFiles: z.number(),
+  additions: z.number(),
+  deletions: z.number(),
+});
+
 export class GitHubToolProvider implements ToolProvider {
   private octokit: Octokit;
 
@@ -133,6 +155,12 @@ export class GitHubToolProvider implements ToolProvider {
         inputSchema: getCommitSchema,
         outputSchema: getCommitOutputSchema,
       },
+      {
+        name: 'github.get_pull_request',
+        description: 'Get details of a specific pull request in a GitHub repository',
+        inputSchema: getPullRequestSchema,
+        outputSchema: getPullRequestOutputSchema,
+      },
     ];
   }
 
@@ -156,6 +184,7 @@ export class GitHubToolProvider implements ToolProvider {
     } else if (name === 'github.get_repository') {
       const { owner, repo } = getRepositorySchema.parse(args);
       const response = await this.octokit.rest.repos.get({ owner, repo });
+      // Map the response data to the expected output format
       return {
         name: response.data.name,
         description: response.data.description,
@@ -169,6 +198,7 @@ export class GitHubToolProvider implements ToolProvider {
     } else if (name === 'github.list_files') {
       const { owner, repo, path, branch } = listFilesSchema.parse(args);
       const response = await this.octokit.rest.repos.getContent({ owner, repo, path, ref: branch });
+      // Check if the response data is an array (indicating a directory)
       if (!Array.isArray(response.data)) {
         throw new Error(`Path "${path}" is a file, not a directory`);
       }
@@ -180,6 +210,7 @@ export class GitHubToolProvider implements ToolProvider {
     } else if (name === 'github.get_file') {
       const { owner, repo, path, branch } = getFileSchema.parse(args);
       const response = await this.octokit.rest.repos.getContent({ owner, repo, path, ref: branch });
+      // Check if the response data is an array (indicating a directory)
       if (Array.isArray(response.data)) {
         throw new Error(`Path "${path}" is a directory, not a file`);
       }
@@ -187,6 +218,7 @@ export class GitHubToolProvider implements ToolProvider {
         throw new Error(`Path "${path}" is not a file`);
       }
       return {
+        // Decode the base64-encoded content of the file
         contents: Buffer.from(response.data.content, 'base64').toString('utf-8'),
         path: response.data.path,
         branch,
@@ -208,6 +240,24 @@ export class GitHubToolProvider implements ToolProvider {
           deletions: file.deletions,
           patch: file.patch,
         })),
+      };
+    } else if (name === 'github.get_pull_request') {
+      const { owner, repo, pullNumber } = getPullRequestSchema.parse(args);
+      const response = await this.octokit.rest.pulls.get({ owner, repo, pull_number: pullNumber });
+      return {
+        number: response.data.number,
+        title: response.data.title,
+        state: response.data.state,
+        description: response.data.body,
+        author: response.data.user?.login,
+        baseBranch: response.data.base.ref,
+        headBranch: response.data.head.ref,
+        merged: response.data.merged,
+        mergeable: response.data.mergeable,
+        commits: response.data.commits,
+        changedFiles: response.data.changed_files,
+        additions: response.data.additions,
+        deletions: response.data.deletions,
       };
     } else {
       throw new Error(`Unknown tool: ${name}`);
