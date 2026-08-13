@@ -51,4 +51,37 @@ describe('GitHubToolProvider', () => {
     const result = await provider.callTool('github.list_commits', { owner: 'test', repo: 'test' });
     expect(result).toEqual([{ sha: 'abc123', message: 'Initial commit', author: 'testuser' }]);
   });
+
+  it('gets repository details using the injected Octokit client', async () => {
+    const fakeOctokit = {
+      rest: {
+        repos: {
+          get: vi.fn().mockResolvedValue({
+            data: {
+              name: 'test-repo',
+              description: 'A test repository',
+              html_url: 'https://github.com/test/test-repo',
+              default_branch: 'main',
+              visibility: 'public',
+              language: 'TypeScript',
+              stargazers_count: 5,
+              updated_at: '2026-01-01T00:00:00Z',
+            },
+          }),
+        },
+      },
+    } as unknown as Octokit;
+    const provider = new GitHubToolProvider(fakeOctokit);
+    const result = await provider.callTool('github.get_repository', { owner: 'test', repo: 'test-repo' });
+    expect(result).toEqual({
+      name: 'test-repo',
+      description: 'A test repository',
+      url: 'https://github.com/test/test-repo',
+      defaultBranch: 'main',
+      visibility: 'public',
+      language: 'TypeScript',
+      stars: 5,
+      updatedAt: '2026-01-01T00:00:00Z',
+    });
+  });
 });

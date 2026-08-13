@@ -8,6 +8,22 @@ const listPullRequestsSchema = z.object({
   state: z.enum(['open', 'closed', 'all']).optional(),
 });
 
+const getRepositorySchema = z.object({
+  owner: z.string(),
+  repo: z.string(),
+});
+
+const getRepositoryOutputSchema = z.object({
+  name: z.string(),
+  description: z.string().nullable(),
+  url: z.string(),
+  defaultBranch: z.string(),
+  visibility: z.string(),
+  language: z.string().nullable(),
+  stars: z.number(),
+  updatedAt: z.string(),
+});
+
 const listCommitsSchema = z.object({
   owner: z.string(),
   repo: z.string(),
@@ -39,6 +55,12 @@ export class GitHubToolProvider implements ToolProvider {
           z.object({ sha: z.string(), message: z.string(), author: z.string().optional() }),
         ),
       },
+      {
+        name: 'github.get_repository',
+        description: 'Get details of a GitHub repository',
+        inputSchema: getRepositorySchema,
+        outputSchema: getRepositoryOutputSchema,
+      },
     ];
   }
 
@@ -59,7 +81,22 @@ export class GitHubToolProvider implements ToolProvider {
         message: commit.commit.message,
         author: commit.author?.login,
       }));
-    } else {
+    } 
+    else if (name === 'github.get_repository') {
+      const { owner, repo } = getRepositorySchema.parse(args);
+      const response = await this.octokit.rest.repos.get({ owner, repo });
+      return {
+        name: response.data.name,
+        description: response.data.description,
+        url: response.data.html_url,
+        defaultBranch: response.data.default_branch,
+        visibility: response.data.visibility,
+        language: response.data.language,
+        stars: response.data.stargazers_count,
+        updatedAt: response.data.updated_at,
+      };
+    }
+    else {
       throw new Error(`Unknown tool: ${name}`);
     }
   }
