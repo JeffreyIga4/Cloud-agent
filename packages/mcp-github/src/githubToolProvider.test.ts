@@ -26,7 +26,7 @@ describe('GitHubToolProvider', () => {
     expect(result).toEqual([{ number: 1, title: 'Test PR', state: 'open' }]);
   });
 
-  it ('it lists commits using the injected Octokit client', async () => {
+  it('it lists commits using the injected Octokit client', async () => {
     // Create a mock Octokit instance
     const fakeOctokit = {
       rest: {

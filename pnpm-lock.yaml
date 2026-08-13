@@ -241,9 +241,18 @@ importers:
 
   apps/cli:
     dependencies:
+      '@azure/arm-resources':
+        specifier: ^6.0.0
+        version: 6.1.0
+      '@azure/identity':
+        specifier: ^4.0.0
+        version: 4.13.1
       '@cloud-agent/agent-core':
         specifier: workspace:*
         version: link:../../packages/agent-core
+      '@cloud-agent/mcp-azure':
+        specifier: workspace:*
+        version: link:../../packages/mcp-azure
       '@cloud-agent/mcp-github':
         specifier: workspace:*
         version: link:../../packages/mcp-github
