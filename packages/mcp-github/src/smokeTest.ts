@@ -6,14 +6,14 @@ const config = loadConfig();
 const octokit = new Octokit({ auth: config.GITHUB_TOKEN });
 const provider = new GitHubToolProvider(octokit);
 
-const result = await provider.callTool('listPullRequests', {
+const result = await provider.callTool('github.list_pull_requests', {
   owner: 'JeffreyIga4',
   repo: 'Cloud-agent',
   state: 'all',
 });
 console.log(result);
 
-const commitsResult = await provider.callTool('listCommits', {
+const commitsResult = await provider.callTool('github.list_commits', {
   owner: 'JeffreyIga4',
   repo: 'Cloud-agent',
 });

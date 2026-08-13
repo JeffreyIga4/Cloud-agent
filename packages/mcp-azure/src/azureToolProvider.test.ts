@@ -21,7 +21,7 @@ describe('AzureToolProvider', () => {
     const provider = new AzureToolProvider(
       mockResourceClient as unknown as ResourceManagementClient,
     );
-    const result = await provider.callTool('listResourceGroups', {});
+    const result = await provider.callTool('azure.list_resource_groups', {});
     expect(result).toEqual([
       { name: 'rg-one', location: 'eastus' },
       { name: 'rg-two', location: 'westus' },

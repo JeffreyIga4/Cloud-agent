@@ -10,6 +10,7 @@
     "@cloud-agent/mcp-azure": "workspace:*",
     "@cloud-agent/mcp-github": "workspace:*",
     "@cloud-agent/shared": "workspace:*",
+    "commander": "^15.0.0",
     "octokit": "^5.0.5"
   }
 }

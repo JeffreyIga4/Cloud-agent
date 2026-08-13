@@ -19,12 +19,12 @@ const resourceClient = new ResourceManagementClient(credential, config.AZURE_SUB
 const azureProvider = new AzureToolProvider(resourceClient);
 const router = new ToolRouter([githubProvider, azureProvider]);
 const runtime = new AgentRuntime(router);
-const prResult = await runtime.runTool('listPullRequests', {
+const prResult = await runtime.runTool('github.list_pull_requests', {
   owner: 'JeffreyIga4',
   repo: 'Cloud-agent',
   state: 'all',
 });
 console.log(prResult);
 
-const rgResult = await runtime.runTool('listResourceGroups', {});
+const rgResult = await runtime.runTool('azure.list_resource_groups', {});
 console.log(rgResult);
