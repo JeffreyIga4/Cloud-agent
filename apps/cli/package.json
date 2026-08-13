@@ -4,7 +4,10 @@
   "type": "module",
   "main": "./src/index.ts",
   "dependencies": {
+    "@azure/arm-resources": "^6.0.0",
+    "@azure/identity": "^4.0.0",
     "@cloud-agent/agent-core": "workspace:*",
+    "@cloud-agent/mcp-azure": "workspace:*",
     "@cloud-agent/mcp-github": "workspace:*",
     "@cloud-agent/shared": "workspace:*",
     "octokit": "^5.0.5"
