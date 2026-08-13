@@ -1,0 +1,18 @@
+{
+  "name": "@cloud-agent/mcp-azure",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "scripts": {
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@cloud-agent/shared": "workspace:*",
+    "@azure/identity": "^4.0.0",
+    "@azure/arm-resources": "^6.0.0"
+  },
+  "devDependencies": {
+    "vitest": "^3.0.0"
+  }
+}
