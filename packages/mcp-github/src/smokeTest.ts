@@ -18,3 +18,6 @@ const commitsResult = await provider.callTool('github.list_commits', {
   repo: 'Cloud-agent',
 });
 console.log(commitsResult);
+
+const repoResult = await provider.callTool('github.get_repository', { owner: 'JeffreyIga4', repo: 'Cloud-agent' });
+console.log(repoResult);
