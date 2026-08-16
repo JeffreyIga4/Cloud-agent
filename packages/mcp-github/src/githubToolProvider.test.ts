@@ -239,4 +239,30 @@ describe('GitHubToolProvider', () => {
       deletions: 20,
     });
   });
+
+  it('searches code using the injected Octokit client', async () => {
+    const fakeOctokit = {
+      rest: {
+        search: {
+          code: vi.fn().mockResolvedValue({
+            data: {
+              items: [
+                {
+                  path: 'src/config.ts',
+                  repository: { full_name: 'test/test-repo' },
+                  text_matches: [{ fragment: 'const DATABASE_URL = process.env.DATABASE_URL;' }],
+                },
+              ],
+            },
+          }),
+        },
+      },
+    } as unknown as Octokit;
+
+    const provider = new GitHubToolProvider(fakeOctokit);
+    const result = await provider.callTool('github.search_code', { query: 'DATABASE_URL', repository: 'test/test-repo' });
+    expect(result).toEqual([
+      { path: 'src/config.ts', repository: 'test/test-repo', snippets: ['const DATABASE_URL = process.env.DATABASE_URL;'] },
+    ]);
+  });
 });
