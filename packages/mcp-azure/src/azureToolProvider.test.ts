@@ -51,4 +51,23 @@ describe('AzureToolProvider', () => {
       { subscriptionId: 'sub-2', name: 'Dev', state: 'Enabled' },
     ]);
   });
+  
+  it('returns resources scoped to a resource group from the Azure API', async () => {
+    const mockResourceClient = {
+      resources: {
+        listByResourceGroup: vi.fn().mockReturnValue([
+          { name: 'my-site', type: 'Microsoft.Web/sites', location: 'eastus', provisioningState: 'Succeeded' },
+        ]),
+      },
+    };
+    const mockSubscriptionClient = {};
+    const provider = new AzureToolProvider(
+      mockResourceClient as unknown as ResourceManagementClient,
+      mockSubscriptionClient as unknown as SubscriptionClient,
+    );
+    const result = await provider.callTool('azure.list_resources', { resourceGroup: 'my-rg' });
+    expect(result).toEqual([
+      { name: 'my-site', type: 'Microsoft.Web/sites', resourceGroup: 'my-rg', location: 'eastus', provisioningState: 'Succeeded' },
+    ]);
+  });
 });
