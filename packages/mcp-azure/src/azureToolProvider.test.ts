@@ -175,4 +175,69 @@ describe('AzureToolProvider', () => {
     const result = await provider.callTool('azure.get_app_service_status', { resourceGroup: 'my-rg', name: 'my-app' });
     expect(result).toEqual({ state: 'Unknown' });
   });
+
+  it('lists deployments using the injected resource client', async () => {
+    const mockResourceClient = {
+      deployments: {
+        listByResourceGroup: vi.fn().mockReturnValue([
+          { name: 'deploy-one', 
+            location: 'eastus', 
+            properties: { 
+              provisioningState: 'Succeeded', 
+              timestamp: new Date('2025-01-01T00:00:00Z') 
+            } },
+        ]),
+      },
+    };
+    const mockSubscriptionClient = {};
+    const mockWebSiteClient = {};
+    const provider = new AzureToolProvider(
+      mockResourceClient as unknown as ResourceManagementClient,
+      mockSubscriptionClient as unknown as SubscriptionClient,
+      mockWebSiteClient as unknown as WebSiteManagementClient,
+    );
+    const result = await provider.callTool('azure.list_deployments', { resourceGroup: 'test-rg' });
+    expect(result).toEqual([
+      { name: 'deploy-one', 
+        resourceGroup: 'test-rg', 
+        location: 'eastus', 
+        state: 'Succeeded', 
+        timestamp: '2025-01-01T00:00:00.000Z' },
+    ]);
+  });
+
+  it('gets a single deployment using the injected resource client', async () => {
+    const mockResourceClient = {
+      deployments: {
+        get: vi.fn().mockResolvedValue({
+          name: 'deploy-one',
+          location: 'eastus',
+          properties: {
+            provisioningState: 'Failed',
+            timestamp: new Date('2025-01-01T00:00:00Z'),
+            error: { message: 'Something went wrong' },
+          },
+        }),
+      },
+    };
+    const mockSubscriptionClient = {};
+    const mockWebSiteClient = {};
+    const provider = new AzureToolProvider(
+      mockResourceClient as unknown as ResourceManagementClient,
+      mockSubscriptionClient as unknown as SubscriptionClient,
+      mockWebSiteClient as unknown as WebSiteManagementClient,
+    );
+    const result = await provider.callTool('azure.get_deployment', {
+      resourceGroup: 'test-rg',
+      deploymentName: 'deploy-one',
+    });
+    expect(result).toEqual({
+      name: 'deploy-one',
+      resourceGroup: 'test-rg',
+      location: 'eastus',
+      state: 'Failed',
+      timestamp: '2025-01-01T00:00:00.000Z',
+      error: 'Something went wrong',
+    });
+  });
 });
