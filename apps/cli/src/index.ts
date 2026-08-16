@@ -5,6 +5,8 @@ import { Octokit } from 'octokit';
 import { AzureToolProvider } from '@cloud-agent/mcp-azure';
 import { ClientSecretCredential } from '@azure/identity';
 import { ResourceManagementClient } from '@azure/arm-resources';
+import { SubscriptionClient } from '@azure/arm-resources-subscriptions';
+import { WebSiteManagementClient } from '@azure/arm-appservice';
 
 const config = loadConfig();
 const octokit = new Octokit({ auth: config.GITHUB_TOKEN });
@@ -16,7 +18,9 @@ const credential = new ClientSecretCredential(
 );
 
 const resourceClient = new ResourceManagementClient(credential, config.AZURE_SUBSCRIPTION_ID);
-const azureProvider = new AzureToolProvider(resourceClient);
+const subscriptionClient = new SubscriptionClient(credential);
+const webSiteClient = new WebSiteManagementClient(credential, config.AZURE_SUBSCRIPTION_ID);
+const azureProvider = new AzureToolProvider(resourceClient, subscriptionClient, webSiteClient);
 const router = new ToolRouter([githubProvider, azureProvider]);
 const runtime = new AgentRuntime(router);
 const prResult = await runtime.runTool('github.list_pull_requests', {

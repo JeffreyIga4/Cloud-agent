@@ -218,7 +218,11 @@ describe('GitHubToolProvider', () => {
     } as unknown as Octokit;
 
     const provider = new GitHubToolProvider(fakeOctokit);
-    const result = await provider.callTool('github.get_pull_request', { owner: 'test', repo: 'test', pullNumber: 42 });
+    const result = await provider.callTool('github.get_pull_request', {
+      owner: 'test',
+      repo: 'test',
+      pullNumber: 42,
+    });
     expect(result).toEqual({
       number: 42,
       title: 'Add feature',

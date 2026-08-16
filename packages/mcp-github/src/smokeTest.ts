@@ -46,5 +46,9 @@ const commitResult = await provider.callTool('github.get_commit', {
 });
 console.log(commitResult);
 
-const prDetailResult = await provider.callTool('github.get_pull_request', { owner: 'JeffreyIga4', repo: 'Cloud-agent', pullNumber: 14 });
+const prDetailResult = await provider.callTool('github.get_pull_request', {
+  owner: 'JeffreyIga4',
+  repo: 'Cloud-agent',
+  pullNumber: 14,
+});
 console.log(prDetailResult);
