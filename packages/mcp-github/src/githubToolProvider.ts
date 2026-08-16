@@ -127,7 +127,6 @@ const getPullRequestDiffOutputSchema = z.object({
   diff: z.string(),
 });
 
-
 export class GitHubToolProvider implements ToolProvider {
   private octokit: Octokit;
 
@@ -197,7 +196,7 @@ export class GitHubToolProvider implements ToolProvider {
         description: 'Get the diff for a specific pull request in a GitHub repository',
         inputSchema: getPullRequestDiffSchema,
         outputSchema: getPullRequestDiffOutputSchema,
-      }
+      },
     ];
   }
 
@@ -296,8 +295,7 @@ export class GitHubToolProvider implements ToolProvider {
         additions: response.data.additions,
         deletions: response.data.deletions,
       };
-    } 
-    else if (name === 'github.search_code') {
+    } else if (name === 'github.search_code') {
       const { query, repository, language } = searchCodeSchema.parse(args);
       const q = `${query} repo:${repository}${language ? ' language:' + language : ''}`;
       const response = await this.octokit.rest.search.code({ q });
@@ -306,17 +304,16 @@ export class GitHubToolProvider implements ToolProvider {
         repository: item.repository.full_name,
         snippets: (item.text_matches ?? []).map((tm) => tm.fragment ?? ''),
       }));
-    }
-    else if (name === 'github.get_pull_request_diff') {
+    } else if (name === 'github.get_pull_request_diff') {
       const { owner, repo, pullNumber } = getPullRequestDiffSchema.parse(args);
-      const response = await this.octokit.rest.pulls.get({ 
-        owner, 
-        repo, 
-        pull_number: pullNumber, 
-        mediaType: { format: 'diff' } });
+      const response = await this.octokit.rest.pulls.get({
+        owner,
+        repo,
+        pull_number: pullNumber,
+        mediaType: { format: 'diff' },
+      });
       return { diff: response.data };
-    }
-    else {
+    } else {
       throw new Error(`Unknown tool: ${name}`);
     }
   }
