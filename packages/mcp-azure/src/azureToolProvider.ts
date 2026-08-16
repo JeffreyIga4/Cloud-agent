@@ -3,6 +3,18 @@ import { ToolProvider, Tool } from '@cloud-agent/shared';
 import { ResourceManagementClient } from '@azure/arm-resources';
 import { SubscriptionClient } from '@azure/arm-resources-subscriptions';
 import { WebSiteManagementClient } from '@azure/arm-appservice';
+import { LogsQueryClient } from '@azure/monitor-query-logs';
+
+// Application Insights 
+const queryApplicationLogsSchema = z.object({
+  workspaceId: z.string(),
+  query: z.string(),
+  hoursBack: z.number(),
+});
+
+const queryApplicationLogsOutputSchema = z.array(
+  z.record(z.string(), z.unknown())
+);
 
 const listResourceGroupsSchema = z.object({});
 const listResourceGroupsOutputSchema = z.array(
@@ -67,7 +79,6 @@ const getAppServiceStatusOutputSchema = z.object({
   state: z.enum(['Running', 'Stopped', 'Starting', 'Stopping', 'Unknown']),
 });
 
-
 const listDeploymentsSchema = z.object({
   resourceGroup: z.string(),
 });
@@ -99,10 +110,17 @@ const getDeploymentOutputSchema = z.object({
 export class AzureToolProvider implements ToolProvider {
   private resourceClient: ResourceManagementClient;
   private subscriptionClient: SubscriptionClient;
+  private logsClient: LogsQueryClient;
   private webSiteClient: WebSiteManagementClient;
-  constructor(resourceClient: ResourceManagementClient, subscriptionClient: SubscriptionClient, webSiteClient: WebSiteManagementClient) {
+  constructor(
+    resourceClient: ResourceManagementClient,
+    subscriptionClient: SubscriptionClient,
+    webSiteClient: WebSiteManagementClient,
+    logsClient: LogsQueryClient,
+  ) {
     this.resourceClient = resourceClient;
     this.subscriptionClient = subscriptionClient;
+    this.logsClient = logsClient;
     this.webSiteClient = webSiteClient;
   }
 
@@ -158,6 +176,12 @@ export class AzureToolProvider implements ToolProvider {
         description: 'Get the full details of a specific deployment',
         inputSchema: getDeploymentSchema,
         outputSchema: getDeploymentOutputSchema,
+      },
+      {
+        name: 'azure.query_application_logs',
+        description: 'Query application logs from Azure Monitor',
+        inputSchema: queryApplicationLogsSchema,
+        outputSchema: queryApplicationLogsOutputSchema
       },
     ];
   }
@@ -219,10 +243,11 @@ export class AzureToolProvider implements ToolProvider {
         }
       }
       return resources;
-    } 
-    else if (name === 'azure.get_resource') {
+    } else if (name === 'azure.get_resource') {
       const { resourceGroup, name: resourceName } = getResourceSchema.parse(args);
-      for await (const resource of this.resourceClient.resources.listByResourceGroup(resourceGroup)) {
+      for await (const resource of this.resourceClient.resources.listByResourceGroup(
+        resourceGroup,
+      )) {
         if (resource.name === resourceName) {
           return {
             name: resource.name ?? '',
@@ -234,11 +259,16 @@ export class AzureToolProvider implements ToolProvider {
         }
       }
       throw new Error(`Resource not found: ${resourceName}`);
-    } 
-    else if (name === 'azure.list_app_services') {
+    } else if (name === 'azure.list_app_services') {
       const { resourceGroup } = listAppServicesSchema.parse(args);
       // List App Services in the specified resource group
-      const services: { name: string; resourceGroup: string; location: string; state: string; url: string }[] = [];
+      const services: {
+        name: string;
+        resourceGroup: string;
+        location: string;
+        state: string;
+        url: string;
+      }[] = [];
       // Using loop to iterate through web apps
       for await (const site of this.webSiteClient.webApps.listByResourceGroup(resourceGroup)) {
         services.push({
@@ -256,15 +286,17 @@ export class AzureToolProvider implements ToolProvider {
         if (site.name === resourceName) {
           const rawState = site.state;
           const state =
-            rawState === 'Running' || rawState === 'Stopped' || rawState === 'Starting' || rawState === 'Stopping'
+            rawState === 'Running' ||
+            rawState === 'Stopped' ||
+            rawState === 'Starting' ||
+            rawState === 'Stopping'
               ? rawState
               : 'Unknown';
           return { state };
         }
       }
       throw new Error(`App Service not found: ${resourceName}`);
-    } 
-    else if (name === 'azure.list_deployments') {
+    } else if (name === 'azure.list_deployments') {
       const { resourceGroup } = listDeploymentsSchema.parse(args);
       const deployments: {
         name: string;
@@ -273,7 +305,9 @@ export class AzureToolProvider implements ToolProvider {
         state: string;
         timestamp: string;
       }[] = [];
-      for await (const deployment of this.resourceClient.deployments.listByResourceGroup(resourceGroup)) {
+      for await (const deployment of this.resourceClient.deployments.listByResourceGroup(
+        resourceGroup,
+      )) {
         deployments.push({
           name: deployment.name ?? '',
           resourceGroup,
@@ -283,8 +317,7 @@ export class AzureToolProvider implements ToolProvider {
         });
       }
       return deployments;
-    } 
-    else if (name === 'azure.get_deployment') {
+    } else if (name === 'azure.get_deployment') {
       const { resourceGroup, deploymentName } = getDeploymentSchema.parse(args);
       const deployment = await this.resourceClient.deployments.get(resourceGroup, deploymentName);
       return {
@@ -295,6 +328,19 @@ export class AzureToolProvider implements ToolProvider {
         timestamp: deployment.properties?.timestamp?.toISOString() ?? '',
         error: deployment.properties?.error?.message,
       };
+    } else if (name === 'azure.query_application_logs') {
+      const { workspaceId, query, hoursBack } = queryApplicationLogsSchema.parse(args);
+      const result = await this.logsClient.queryWorkspace(workspaceId, query, { duration: `PT${hoursBack}H` });
+      if (result.status !== 'Success') {
+        throw new Error(`Log query failed with status: ${result.status}`);
+      }
+      const table = result.tables[0];
+      if (!table) {
+        return [];
+      }
+      return table.rows.map((row) =>
+        Object.fromEntries(table.columnDescriptors.map((column, index) => [column.name, row[index]])),
+      );
     }
     else {
       throw new Error(`Unknown tool: ${name}`);

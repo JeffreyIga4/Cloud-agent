@@ -3,6 +3,7 @@ import { describe, it, expect, vi } from 'vitest';
 import type { ResourceManagementClient } from '@azure/arm-resources';
 import type { SubscriptionClient } from '@azure/arm-resources-subscriptions';
 import type { WebSiteManagementClient } from '@azure/arm-appservice';
+import type { LogsQueryClient } from '@azure/monitor-query-logs';
 
 describe('AzureToolProvider', () => {
   it('returns resource groups from the Azure API', async () => {
@@ -22,10 +23,12 @@ describe('AzureToolProvider', () => {
     };
     const mockSubscriptionClient = {};
     const mockWebSiteClient = {};
+    const mockLogsClient = {};
     const provider = new AzureToolProvider(
       mockResourceClient as unknown as ResourceManagementClient,
       mockSubscriptionClient as unknown as SubscriptionClient,
-      mockWebSiteClient as unknown as WebSiteManagementClient
+      mockWebSiteClient as unknown as WebSiteManagementClient,
+      mockLogsClient as unknown as LogsQueryClient,
     );
     const result = await provider.callTool('azure.list_resource_groups', {});
     expect(result).toEqual([
@@ -45,10 +48,12 @@ describe('AzureToolProvider', () => {
         ]),
       },
     };
+    const mockLogsClient = {};
     const provider = new AzureToolProvider(
       mockResourceClient as unknown as ResourceManagementClient,
       mockSubscriptionClient as unknown as SubscriptionClient,
-      mockWebSiteClient as unknown as WebSiteManagementClient
+      mockWebSiteClient as unknown as WebSiteManagementClient,
+      mockLogsClient as unknown as LogsQueryClient,
     );
     const result = await provider.callTool('azure.list_subscriptions', {});
     expect(result).toEqual([
@@ -60,24 +65,24 @@ describe('AzureToolProvider', () => {
   it('returns resources scoped to a resource group from the Azure API', async () => {
     const mockResourceClient = {
       resources: {
-        listByResourceGroup: vi
-          .fn()
-          .mockReturnValue([
-            {
-              name: 'my-site',
-              type: 'Microsoft.Web/sites',
-              location: 'eastus',
-              provisioningState: 'Succeeded',
-            },
-          ]),
+        listByResourceGroup: vi.fn().mockReturnValue([
+          {
+            name: 'my-site',
+            type: 'Microsoft.Web/sites',
+            location: 'eastus',
+            provisioningState: 'Succeeded',
+          },
+        ]),
       },
     };
     const mockSubscriptionClient = {};
     const mockWebSiteClient = {};
+    const mockLogsClient = {};
     const provider = new AzureToolProvider(
       mockResourceClient as unknown as ResourceManagementClient,
       mockSubscriptionClient as unknown as SubscriptionClient,
-      mockWebSiteClient as unknown as WebSiteManagementClient
+      mockWebSiteClient as unknown as WebSiteManagementClient,
+      mockLogsClient as unknown as LogsQueryClient,
     );
     const result = await provider.callTool('azure.list_resources', { resourceGroup: 'my-rg' });
     expect(result).toEqual([
@@ -95,19 +100,34 @@ describe('AzureToolProvider', () => {
     const mockResourceClient = {
       resources: {
         listByResourceGroup: vi.fn().mockReturnValue([
-          { name: 'other-resource', type: 'Microsoft.Storage/storageAccounts', location: 'eastus', provisioningState: 'Succeeded' },
-          { name: 'my-site', type: 'Microsoft.Web/sites', location: 'eastus', provisioningState: 'Succeeded' },
+          {
+            name: 'other-resource',
+            type: 'Microsoft.Storage/storageAccounts',
+            location: 'eastus',
+            provisioningState: 'Succeeded',
+          },
+          {
+            name: 'my-site',
+            type: 'Microsoft.Web/sites',
+            location: 'eastus',
+            provisioningState: 'Succeeded',
+          },
         ]),
       },
     };
     const mockSubscriptionClient = {};
     const mockWebSiteClient = {};
+    const mockLogsClient = {};
     const provider = new AzureToolProvider(
       mockResourceClient as unknown as ResourceManagementClient,
       mockSubscriptionClient as unknown as SubscriptionClient,
-      mockWebSiteClient as unknown as WebSiteManagementClient
+      mockWebSiteClient as unknown as WebSiteManagementClient,
+      mockLogsClient as unknown as LogsQueryClient,
     );
-    const result = await provider.callTool('azure.get_resource', { resourceGroup: 'my-rg', name: 'my-site' });
+    const result = await provider.callTool('azure.get_resource', {
+      resourceGroup: 'my-rg',
+      name: 'my-site',
+    });
     expect(result).toEqual({
       name: 'my-site',
       type: 'Microsoft.Web/sites',
@@ -122,19 +142,34 @@ describe('AzureToolProvider', () => {
     const mockSubscriptionClient = {};
     const mockWebSiteClient = {
       webApps: {
-        listByResourceGroup: vi.fn().mockReturnValue([
-          { name: 'my-app', location: 'eastus', state: 'Running', defaultHostName: 'my-app.azurewebsites.net' },
-        ]),
+        listByResourceGroup: vi
+          .fn()
+          .mockReturnValue([
+            {
+              name: 'my-app',
+              location: 'eastus',
+              state: 'Running',
+              defaultHostName: 'my-app.azurewebsites.net',
+            },
+          ]),
       },
     };
+    const mockLogsClient = {};
     const provider = new AzureToolProvider(
       mockResourceClient as unknown as ResourceManagementClient,
       mockSubscriptionClient as unknown as SubscriptionClient,
       mockWebSiteClient as unknown as WebSiteManagementClient,
+      mockLogsClient as unknown as LogsQueryClient,
     );
     const result = await provider.callTool('azure.list_app_services', { resourceGroup: 'my-rg' });
     expect(result).toEqual([
-      { name: 'my-app', resourceGroup: 'my-rg', location: 'eastus', state: 'Running', url: 'https://my-app.azurewebsites.net' },
+      {
+        name: 'my-app',
+        resourceGroup: 'my-rg',
+        location: 'eastus',
+        state: 'Running',
+        url: 'https://my-app.azurewebsites.net',
+      },
     ]);
   });
 
@@ -143,17 +178,20 @@ describe('AzureToolProvider', () => {
     const mockSubscriptionClient = {};
     const mockWebSiteClient = {
       webApps: {
-        listByResourceGroup: vi.fn().mockReturnValue([
-          { name: 'my-app', state: 'Running' },
-        ]),
+        listByResourceGroup: vi.fn().mockReturnValue([{ name: 'my-app', state: 'Running' }]),
       },
     };
+    const mockLogsClient = {};
     const provider = new AzureToolProvider(
       mockResourceClient as unknown as ResourceManagementClient,
       mockSubscriptionClient as unknown as SubscriptionClient,
       mockWebSiteClient as unknown as WebSiteManagementClient,
+      mockLogsClient as unknown as LogsQueryClient,
     );
-    const result = await provider.callTool('azure.get_app_service_status', { resourceGroup: 'my-rg', name: 'my-app' });
+    const result = await provider.callTool('azure.get_app_service_status', {
+      resourceGroup: 'my-rg',
+      name: 'my-app',
+    });
     expect(result).toEqual({ state: 'Running' });
   });
 
@@ -162,17 +200,20 @@ describe('AzureToolProvider', () => {
     const mockSubscriptionClient = {};
     const mockWebSiteClient = {
       webApps: {
-        listByResourceGroup: vi.fn().mockReturnValue([
-          { name: 'my-app', state: 'SomeWeirdState' },
-        ]),
+        listByResourceGroup: vi.fn().mockReturnValue([{ name: 'my-app', state: 'SomeWeirdState' }]),
       },
     };
+    const mockLogsClient = {};
     const provider = new AzureToolProvider(
       mockResourceClient as unknown as ResourceManagementClient,
       mockSubscriptionClient as unknown as SubscriptionClient,
       mockWebSiteClient as unknown as WebSiteManagementClient,
+      mockLogsClient as unknown as LogsQueryClient,
     );
-    const result = await provider.callTool('azure.get_app_service_status', { resourceGroup: 'my-rg', name: 'my-app' });
+    const result = await provider.callTool('azure.get_app_service_status', {
+      resourceGroup: 'my-rg',
+      name: 'my-app',
+    });
     expect(result).toEqual({ state: 'Unknown' });
   });
 
@@ -180,29 +221,35 @@ describe('AzureToolProvider', () => {
     const mockResourceClient = {
       deployments: {
         listByResourceGroup: vi.fn().mockReturnValue([
-          { name: 'deploy-one', 
-            location: 'eastus', 
-            properties: { 
-              provisioningState: 'Succeeded', 
-              timestamp: new Date('2025-01-01T00:00:00Z') 
-            } },
+          {
+            name: 'deploy-one',
+            location: 'eastus',
+            properties: {
+              provisioningState: 'Succeeded',
+              timestamp: new Date('2025-01-01T00:00:00Z'),
+            },
+          },
         ]),
       },
     };
     const mockSubscriptionClient = {};
     const mockWebSiteClient = {};
+    const mockLogsClient = {};
     const provider = new AzureToolProvider(
       mockResourceClient as unknown as ResourceManagementClient,
       mockSubscriptionClient as unknown as SubscriptionClient,
       mockWebSiteClient as unknown as WebSiteManagementClient,
+      mockLogsClient as unknown as LogsQueryClient,
     );
     const result = await provider.callTool('azure.list_deployments', { resourceGroup: 'test-rg' });
     expect(result).toEqual([
-      { name: 'deploy-one', 
-        resourceGroup: 'test-rg', 
-        location: 'eastus', 
-        state: 'Succeeded', 
-        timestamp: '2025-01-01T00:00:00.000Z' },
+      {
+        name: 'deploy-one',
+        resourceGroup: 'test-rg',
+        location: 'eastus',
+        state: 'Succeeded',
+        timestamp: '2025-01-01T00:00:00.000Z',
+      },
     ]);
   });
 
@@ -222,10 +269,12 @@ describe('AzureToolProvider', () => {
     };
     const mockSubscriptionClient = {};
     const mockWebSiteClient = {};
+    const mockLogsClient = {};
     const provider = new AzureToolProvider(
       mockResourceClient as unknown as ResourceManagementClient,
       mockSubscriptionClient as unknown as SubscriptionClient,
       mockWebSiteClient as unknown as WebSiteManagementClient,
+      mockLogsClient as unknown as LogsQueryClient,
     );
     const result = await provider.callTool('azure.get_deployment', {
       resourceGroup: 'test-rg',
@@ -239,5 +288,36 @@ describe('AzureToolProvider', () => {
       timestamp: '2025-01-01T00:00:00.000Z',
       error: 'Something went wrong',
     });
+  });
+
+  it('queries application logs using the injected logs client', async () => {
+    const mockResourceClient = {};
+    const mockSubscriptionClient = {};
+    const mockWebSiteClient = {};
+    const mockLogsClient = {
+      queryWorkspace: vi.fn().mockResolvedValue({
+        status: 'Success',
+        tables: [
+          {
+            columnDescriptors: [{ name: 'Message' }, { name: 'TimeGenerated' }],
+            rows: [['Server started', '2025-01-01T00:00:00Z']],
+          },
+        ],
+      }),
+    };
+    const provider = new AzureToolProvider(
+      mockResourceClient as unknown as ResourceManagementClient,
+      mockSubscriptionClient as unknown as SubscriptionClient,
+      mockWebSiteClient as unknown as WebSiteManagementClient,
+      mockLogsClient as unknown as LogsQueryClient,
+    );
+    const result = await provider.callTool('azure.query_application_logs', {
+      workspaceId: 'test-workspace-id',
+      query: 'AppTraces | take 5',
+      hoursBack: 24,
+    });
+    expect(result).toEqual([
+      { Message: 'Server started', TimeGenerated: '2025-01-01T00:00:00Z' },
+    ]);
   });
 });

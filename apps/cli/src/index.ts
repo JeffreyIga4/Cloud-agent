@@ -7,6 +7,7 @@ import { ClientSecretCredential } from '@azure/identity';
 import { ResourceManagementClient } from '@azure/arm-resources';
 import { SubscriptionClient } from '@azure/arm-resources-subscriptions';
 import { WebSiteManagementClient } from '@azure/arm-appservice';
+import { LogsQueryClient } from '@azure/monitor-query-logs';
 
 const config = loadConfig();
 const octokit = new Octokit({ auth: config.GITHUB_TOKEN });
@@ -16,11 +17,16 @@ const credential = new ClientSecretCredential(
   config.AZURE_CLIENT_ID,
   config.AZURE_CLIENT_SECRET,
 );
-
+const logsClient = new LogsQueryClient(credential);
 const resourceClient = new ResourceManagementClient(credential, config.AZURE_SUBSCRIPTION_ID);
 const subscriptionClient = new SubscriptionClient(credential);
 const webSiteClient = new WebSiteManagementClient(credential, config.AZURE_SUBSCRIPTION_ID);
-const azureProvider = new AzureToolProvider(resourceClient, subscriptionClient, webSiteClient);
+const azureProvider = new AzureToolProvider(
+  resourceClient,
+  subscriptionClient,
+  webSiteClient,
+  logsClient,
+);
 const router = new ToolRouter([githubProvider, azureProvider]);
 const runtime = new AgentRuntime(router);
 const prResult = await runtime.runTool('github.list_pull_requests', {

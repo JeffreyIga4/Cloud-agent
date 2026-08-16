@@ -260,9 +260,16 @@ describe('GitHubToolProvider', () => {
     } as unknown as Octokit;
 
     const provider = new GitHubToolProvider(fakeOctokit);
-    const result = await provider.callTool('github.search_code', { query: 'DATABASE_URL', repository: 'test/test-repo' });
+    const result = await provider.callTool('github.search_code', {
+      query: 'DATABASE_URL',
+      repository: 'test/test-repo',
+    });
     expect(result).toEqual([
-      { path: 'src/config.ts', repository: 'test/test-repo', snippets: ['const DATABASE_URL = process.env.DATABASE_URL;'] },
+      {
+        path: 'src/config.ts',
+        repository: 'test/test-repo',
+        snippets: ['const DATABASE_URL = process.env.DATABASE_URL;'],
+      },
     ]);
   });
 
@@ -278,7 +285,11 @@ describe('GitHubToolProvider', () => {
     } as unknown as Octokit;
 
     const provider = new GitHubToolProvider(fakeOctokit);
-    const result = await provider.callTool('github.get_pull_request_diff', { owner: 'test', repo: 'test', pullNumber: 42 });
+    const result = await provider.callTool('github.get_pull_request_diff', {
+      owner: 'test',
+      repo: 'test',
+      pullNumber: 42,
+    });
     expect(result).toEqual({
       diff: '--- a/src/config.ts\n+++ b/src/config.ts\n@@ -1,1 +1,1 @@\n-const DATABASE_URL = "old";\n+const DATABASE_URL = "new";',
     });
