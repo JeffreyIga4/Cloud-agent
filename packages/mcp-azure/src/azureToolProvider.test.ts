@@ -1,6 +1,7 @@
 import { AzureToolProvider } from './azureToolProvider.js';
 import { describe, it, expect, vi } from 'vitest';
 import type { ResourceManagementClient } from '@azure/arm-resources';
+import type { SubscriptionClient } from '@azure/arm-resources-subscriptions';
 
 describe('AzureToolProvider', () => {
   it('returns resource groups from the Azure API', async () => {
@@ -18,13 +19,36 @@ describe('AzureToolProvider', () => {
         ]),
       },
     };
+    const mockSubscriptionClient = {};
     const provider = new AzureToolProvider(
       mockResourceClient as unknown as ResourceManagementClient,
+      mockSubscriptionClient as unknown as SubscriptionClient,
     );
     const result = await provider.callTool('azure.list_resource_groups', {});
     expect(result).toEqual([
       { name: 'rg-one', location: 'eastus' },
       { name: 'rg-two', location: 'westus' },
+    ]);
+  });
+
+  it('returns subscriptions from the Azure API', async () => {
+    const mockResourceClient = {};
+    const mockSubscriptionClient = {
+      subscriptions: {
+        list: vi.fn().mockReturnValue([
+          { subscriptionId: 'sub-1', displayName: 'Production', state: 'Enabled' },
+          { subscriptionId: 'sub-2', displayName: 'Dev', state: 'Enabled' },
+        ]),
+      },
+    };
+    const provider = new AzureToolProvider(
+      mockResourceClient as unknown as ResourceManagementClient,
+      mockSubscriptionClient as unknown as SubscriptionClient,
+    );
+    const result = await provider.callTool('azure.list_subscriptions', {});
+    expect(result).toEqual([
+      { subscriptionId: 'sub-1', name: 'Production', state: 'Enabled' },
+      { subscriptionId: 'sub-2', name: 'Dev', state: 'Enabled' },
     ]);
   });
 });
