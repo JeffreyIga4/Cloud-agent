@@ -27,3 +27,5 @@ const resourceResult = await provider.callTool('azure.get_resource', { resourceG
 console.log(resourceResult);
 const appServicesResult = await provider.callTool('azure.list_app_services', { resourceGroup: 'resume-project-rg' });
 console.log(appServicesResult);
+const statusResult = await provider.callTool('azure.get_app_service_status', { resourceGroup: 'resume-project-rg', name: 'GetResumeCounter-EU' });
+console.log(statusResult);

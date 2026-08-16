@@ -58,6 +58,15 @@ const listAppServicesOutputSchema = z.array(
   }),
 );
 
+const getAppServiceStatusSchema = z.object({
+  resourceGroup: z.string(),
+  name: z.string(),
+});
+
+const getAppServiceStatusOutputSchema = z.object({
+  state: z.enum(['Running', 'Stopped', 'Starting', 'Stopping', 'Unknown']),
+});
+
 export class AzureToolProvider implements ToolProvider {
   private resourceClient: ResourceManagementClient;
   private subscriptionClient: SubscriptionClient;
@@ -102,6 +111,12 @@ export class AzureToolProvider implements ToolProvider {
         description: 'List App Services in a resource group',
         inputSchema: listAppServicesSchema,
         outputSchema: listAppServicesOutputSchema,
+      },
+      {
+        name: 'azure.get_app_service_status',
+        description: 'Get the status of a specific App Service',
+        inputSchema: getAppServiceStatusSchema,
+        outputSchema: getAppServiceStatusOutputSchema,
       },
     ];
   }
@@ -194,8 +209,20 @@ export class AzureToolProvider implements ToolProvider {
         });
       }
       return services;
-    }
-    else {
+    } else if (name === 'azure.get_app_service_status') {
+      const { resourceGroup, name: resourceName } = getAppServiceStatusSchema.parse(args);
+      for await (const site of this.webSiteClient.webApps.listByResourceGroup(resourceGroup)) {
+        if (site.name === resourceName) {
+          const rawState = site.state;
+          const state =
+            rawState === 'Running' || rawState === 'Stopped' || rawState === 'Starting' || rawState === 'Stopping'
+              ? rawState
+              : 'Unknown';
+          return { state };
+        }
+      }
+      throw new Error(`App Service not found: ${resourceName}`);
+    } else {
       throw new Error(`Unknown tool: ${name}`);
     }
   }

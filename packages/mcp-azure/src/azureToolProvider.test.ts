@@ -137,4 +137,42 @@ describe('AzureToolProvider', () => {
       { name: 'my-app', resourceGroup: 'my-rg', location: 'eastus', state: 'Running', url: 'https://my-app.azurewebsites.net' },
     ]);
   });
+
+  it('gets app service status using the injected clients', async () => {
+    const mockResourceClient = {};
+    const mockSubscriptionClient = {};
+    const mockWebSiteClient = {
+      webApps: {
+        listByResourceGroup: vi.fn().mockReturnValue([
+          { name: 'my-app', state: 'Running' },
+        ]),
+      },
+    };
+    const provider = new AzureToolProvider(
+      mockResourceClient as unknown as ResourceManagementClient,
+      mockSubscriptionClient as unknown as SubscriptionClient,
+      mockWebSiteClient as unknown as WebSiteManagementClient,
+    );
+    const result = await provider.callTool('azure.get_app_service_status', { resourceGroup: 'my-rg', name: 'my-app' });
+    expect(result).toEqual({ state: 'Running' });
+  });
+
+  it('falls back to Unknown for an unrecognized state value', async () => {
+    const mockResourceClient = {};
+    const mockSubscriptionClient = {};
+    const mockWebSiteClient = {
+      webApps: {
+        listByResourceGroup: vi.fn().mockReturnValue([
+          { name: 'my-app', state: 'SomeWeirdState' },
+        ]),
+      },
+    };
+    const provider = new AzureToolProvider(
+      mockResourceClient as unknown as ResourceManagementClient,
+      mockSubscriptionClient as unknown as SubscriptionClient,
+      mockWebSiteClient as unknown as WebSiteManagementClient,
+    );
+    const result = await provider.callTool('azure.get_app_service_status', { resourceGroup: 'my-rg', name: 'my-app' });
+    expect(result).toEqual({ state: 'Unknown' });
+  });
 });
