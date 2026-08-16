@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { ToolProvider, Tool } from '@cloud-agent/shared';
 import { ResourceManagementClient } from '@azure/arm-resources';
-import { SubscriptionClient } from "@azure/arm-resources-subscriptions";
+import { SubscriptionClient } from '@azure/arm-resources-subscriptions';
 
 const listResourceGroupsSchema = z.object({});
 const listResourceGroupsOutputSchema = z.array(
@@ -10,15 +10,38 @@ const listResourceGroupsOutputSchema = z.array(
 
 const listSubscriptionsSchema = z.object({});
 const listSubscriptionsOutputSchema = z.array(
-  z.object({ subscriptionId: z.string(), name: z.string(), state: z.string() }),
+  z.object({
+    subscriptionId: z.string(),
+    name: z.string(),
+    state: z.string(),
+  }),
 );
 
 const listResourcesSchema = z.object({
-  resourceGroup: z.string().optional()
+  resourceGroup: z.string().optional(),
 });
 const listResourcesOutputSchema = z.array(
-  z.object({ name: z.string(), type: z.string(), resourceGroup: z.string(), location: z.string(), provisioningState: z.string() }),
+  z.object({
+    name: z.string(),
+    type: z.string(),
+    resourceGroup: z.string(),
+    location: z.string(),
+    provisioningState: z.string(),
+  }),
 );
+
+const getResourceSchema = z.object({
+  resourceGroup: z.string(),
+  name: z.string(),
+});
+
+const getResourceOutputSchema = z.object({
+  name: z.string(),
+  type: z.string(),
+  resourceGroup: z.string(),
+  location: z.string(),
+  provisioningState: z.string(),
+});
 
 export class AzureToolProvider implements ToolProvider {
   private resourceClient: ResourceManagementClient;
@@ -51,6 +74,13 @@ export class AzureToolProvider implements ToolProvider {
         inputSchema: listResourcesSchema,
         outputSchema: listResourcesOutputSchema,
       },
+
+      {
+        name: 'azure.get_resource',
+        description: 'Get details of a specific resource in the Azure subscription',
+        inputSchema: getResourceSchema,
+        outputSchema: getResourceOutputSchema,
+      }
     ];
   }
 
@@ -63,8 +93,7 @@ export class AzureToolProvider implements ToolProvider {
         groups.push({ name: group.name ?? '', location: group.location ?? '' });
       }
       return groups;
-    } 
-    else if (name === 'azure.list_subscriptions') {
+    } else if (name === 'azure.list_subscriptions') {
       listSubscriptionsSchema.parse(args);
       const subscriptions: { subscriptionId: string; name: string; state: string }[] = [];
       for await (const sub of this.subscriptionClient.subscriptions.list()) {
@@ -75,13 +104,20 @@ export class AzureToolProvider implements ToolProvider {
         });
       }
       return subscriptions;
-    } 
-    else if (name === 'azure.list_resources') {
+    } else if (name === 'azure.list_resources') {
       const { resourceGroup } = listResourcesSchema.parse(args);
-      const resources: { name: string; type: string; resourceGroup: string; location: string; provisioningState: string }[] = [];
+      const resources: {
+        name: string;
+        type: string;
+        resourceGroup: string;
+        location: string;
+        provisioningState: string;
+      }[] = [];
 
       if (resourceGroup) {
-        for await (const resource of this.resourceClient.resources.listByResourceGroup(resourceGroup)) {
+        for await (const resource of this.resourceClient.resources.listByResourceGroup(
+          resourceGroup,
+        )) {
           resources.push({
             name: resource.name ?? '',
             type: resource.type ?? '',
@@ -106,7 +142,21 @@ export class AzureToolProvider implements ToolProvider {
       }
       return resources;
     } 
-    else {
+    else if (name === 'azure.get_resource') {
+      const { resourceGroup, name: resourceName } = getResourceSchema.parse(args);
+      for await (const resource of this.resourceClient.resources.listByResourceGroup(resourceGroup)) {
+        if (resource.name === resourceName) {
+          return {
+            name: resource.name ?? '',
+            type: resource.type ?? '',
+            resourceGroup,
+            location: resource.location ?? '',
+            provisioningState: resource.provisioningState ?? '',
+          };
+        }
+      }
+      throw new Error(`Resource not found: ${resourceName}`);
+    } else {
       throw new Error(`Unknown tool: ${name}`);
     }
   }

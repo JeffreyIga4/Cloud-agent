@@ -17,5 +17,9 @@ const subscriptionClient = new SubscriptionClient(credential);
 const provider = new AzureToolProvider(resourceClient, subscriptionClient);
 const result = await provider.callTool('azure.list_resource_groups', {});
 console.log(result);
-const resourcesResult = await provider.callTool('azure.list_resources', { resourceGroup: 'resume-project-rg' });
+const resourcesResult = await provider.callTool('azure.list_resources', {
+  resourceGroup: 'resume-project-rg',
+});
 console.log(resourcesResult);
+const resourceResult = await provider.callTool('azure.get_resource', { resourceGroup: 'resume-project-rg', name: 'GetResumeCounter-EU' });
+console.log(resourceResult);
