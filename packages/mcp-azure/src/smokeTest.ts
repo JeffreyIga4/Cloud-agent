@@ -2,6 +2,7 @@ import { loadConfig } from '@cloud-agent/shared';
 import { ClientSecretCredential } from '@azure/identity';
 import { ResourceManagementClient } from '@azure/arm-resources';
 import { SubscriptionClient } from '@azure/arm-resources-subscriptions';
+import { WebSiteManagementClient } from '@azure/arm-appservice';
 import { AzureToolProvider } from './azureToolProvider.js';
 
 const config = loadConfig();
@@ -14,7 +15,8 @@ const credential = new ClientSecretCredential(
 
 const resourceClient = new ResourceManagementClient(credential, config.AZURE_SUBSCRIPTION_ID);
 const subscriptionClient = new SubscriptionClient(credential);
-const provider = new AzureToolProvider(resourceClient, subscriptionClient);
+const webSiteClient = new WebSiteManagementClient(credential, config.AZURE_SUBSCRIPTION_ID);
+const provider = new AzureToolProvider(resourceClient, subscriptionClient, webSiteClient);
 const result = await provider.callTool('azure.list_resource_groups', {});
 console.log(result);
 const resourcesResult = await provider.callTool('azure.list_resources', {
@@ -23,3 +25,5 @@ const resourcesResult = await provider.callTool('azure.list_resources', {
 console.log(resourcesResult);
 const resourceResult = await provider.callTool('azure.get_resource', { resourceGroup: 'resume-project-rg', name: 'GetResumeCounter-EU' });
 console.log(resourceResult);
+const appServicesResult = await provider.callTool('azure.list_app_services', { resourceGroup: 'resume-project-rg' });
+console.log(appServicesResult);

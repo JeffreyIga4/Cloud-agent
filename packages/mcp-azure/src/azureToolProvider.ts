@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { ToolProvider, Tool } from '@cloud-agent/shared';
 import { ResourceManagementClient } from '@azure/arm-resources';
 import { SubscriptionClient } from '@azure/arm-resources-subscriptions';
+import { WebSiteManagementClient } from '@azure/arm-appservice';
 
 const listResourceGroupsSchema = z.object({});
 const listResourceGroupsOutputSchema = z.array(
@@ -43,13 +44,28 @@ const getResourceOutputSchema = z.object({
   provisioningState: z.string(),
 });
 
+const listAppServicesSchema = z.object({
+  resourceGroup: z.string(),
+});
+
+const listAppServicesOutputSchema = z.array(
+  z.object({
+    name: z.string(),
+    resourceGroup: z.string(),
+    location: z.string(),
+    state: z.string(),
+    url: z.string(),
+  }),
+);
+
 export class AzureToolProvider implements ToolProvider {
   private resourceClient: ResourceManagementClient;
   private subscriptionClient: SubscriptionClient;
-
-  constructor(resourceClient: ResourceManagementClient, subscriptionClient: SubscriptionClient) {
+  private webSiteClient: WebSiteManagementClient;
+  constructor(resourceClient: ResourceManagementClient, subscriptionClient: SubscriptionClient, webSiteClient: WebSiteManagementClient) {
     this.resourceClient = resourceClient;
     this.subscriptionClient = subscriptionClient;
+    this.webSiteClient = webSiteClient;
   }
 
   async listTools(): Promise<Tool[]> {
@@ -80,7 +96,13 @@ export class AzureToolProvider implements ToolProvider {
         description: 'Get details of a specific resource in the Azure subscription',
         inputSchema: getResourceSchema,
         outputSchema: getResourceOutputSchema,
-      }
+      },
+      {
+        name: 'azure.list_app_services',
+        description: 'List App Services in a resource group',
+        inputSchema: listAppServicesSchema,
+        outputSchema: listAppServicesOutputSchema,
+      },
     ];
   }
 
@@ -156,7 +178,24 @@ export class AzureToolProvider implements ToolProvider {
         }
       }
       throw new Error(`Resource not found: ${resourceName}`);
-    } else {
+    } 
+    else if (name === 'azure.list_app_services') {
+      const { resourceGroup } = listAppServicesSchema.parse(args);
+      // List App Services in the specified resource group
+      const services: { name: string; resourceGroup: string; location: string; state: string; url: string }[] = [];
+      // Using loop to iterate through web apps
+      for await (const site of this.webSiteClient.webApps.listByResourceGroup(resourceGroup)) {
+        services.push({
+          name: site.name ?? '',
+          resourceGroup,
+          location: site.location ?? '',
+          state: site.state ?? '',
+          url: site.defaultHostName ? `https://${site.defaultHostName}` : '',
+        });
+      }
+      return services;
+    }
+    else {
       throw new Error(`Unknown tool: ${name}`);
     }
   }

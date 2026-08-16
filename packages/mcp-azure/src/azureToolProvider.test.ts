@@ -2,6 +2,7 @@ import { AzureToolProvider } from './azureToolProvider.js';
 import { describe, it, expect, vi } from 'vitest';
 import type { ResourceManagementClient } from '@azure/arm-resources';
 import type { SubscriptionClient } from '@azure/arm-resources-subscriptions';
+import type { WebSiteManagementClient } from '@azure/arm-appservice';
 
 describe('AzureToolProvider', () => {
   it('returns resource groups from the Azure API', async () => {
@@ -20,9 +21,11 @@ describe('AzureToolProvider', () => {
       },
     };
     const mockSubscriptionClient = {};
+    const mockWebSiteClient = {};
     const provider = new AzureToolProvider(
       mockResourceClient as unknown as ResourceManagementClient,
       mockSubscriptionClient as unknown as SubscriptionClient,
+      mockWebSiteClient as unknown as WebSiteManagementClient
     );
     const result = await provider.callTool('azure.list_resource_groups', {});
     expect(result).toEqual([
@@ -33,6 +36,7 @@ describe('AzureToolProvider', () => {
 
   it('returns subscriptions from the Azure API', async () => {
     const mockResourceClient = {};
+    const mockWebSiteClient = {};
     const mockSubscriptionClient = {
       subscriptions: {
         list: vi.fn().mockReturnValue([
@@ -44,6 +48,7 @@ describe('AzureToolProvider', () => {
     const provider = new AzureToolProvider(
       mockResourceClient as unknown as ResourceManagementClient,
       mockSubscriptionClient as unknown as SubscriptionClient,
+      mockWebSiteClient as unknown as WebSiteManagementClient
     );
     const result = await provider.callTool('azure.list_subscriptions', {});
     expect(result).toEqual([
@@ -68,9 +73,11 @@ describe('AzureToolProvider', () => {
       },
     };
     const mockSubscriptionClient = {};
+    const mockWebSiteClient = {};
     const provider = new AzureToolProvider(
       mockResourceClient as unknown as ResourceManagementClient,
       mockSubscriptionClient as unknown as SubscriptionClient,
+      mockWebSiteClient as unknown as WebSiteManagementClient
     );
     const result = await provider.callTool('azure.list_resources', { resourceGroup: 'my-rg' });
     expect(result).toEqual([
@@ -94,9 +101,11 @@ describe('AzureToolProvider', () => {
       },
     };
     const mockSubscriptionClient = {};
+    const mockWebSiteClient = {};
     const provider = new AzureToolProvider(
       mockResourceClient as unknown as ResourceManagementClient,
       mockSubscriptionClient as unknown as SubscriptionClient,
+      mockWebSiteClient as unknown as WebSiteManagementClient
     );
     const result = await provider.callTool('azure.get_resource', { resourceGroup: 'my-rg', name: 'my-site' });
     expect(result).toEqual({
@@ -106,5 +115,26 @@ describe('AzureToolProvider', () => {
       location: 'eastus',
       provisioningState: 'Succeeded',
     });
+  });
+
+  it('returns app services scoped to a resource group from the Azure API', async () => {
+    const mockResourceClient = {};
+    const mockSubscriptionClient = {};
+    const mockWebSiteClient = {
+      webApps: {
+        listByResourceGroup: vi.fn().mockReturnValue([
+          { name: 'my-app', location: 'eastus', state: 'Running', defaultHostName: 'my-app.azurewebsites.net' },
+        ]),
+      },
+    };
+    const provider = new AzureToolProvider(
+      mockResourceClient as unknown as ResourceManagementClient,
+      mockSubscriptionClient as unknown as SubscriptionClient,
+      mockWebSiteClient as unknown as WebSiteManagementClient,
+    );
+    const result = await provider.callTool('azure.list_app_services', { resourceGroup: 'my-rg' });
+    expect(result).toEqual([
+      { name: 'my-app', resourceGroup: 'my-rg', location: 'eastus', state: 'Running', url: 'https://my-app.azurewebsites.net' },
+    ]);
   });
 });
