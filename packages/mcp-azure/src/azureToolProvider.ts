@@ -5,17 +5,33 @@ import { SubscriptionClient } from '@azure/arm-resources-subscriptions';
 import { WebSiteManagementClient } from '@azure/arm-appservice';
 import { LogsQueryClient } from '@azure/monitor-query-logs';
 
-// Application Insights 
+// Application Insights Schemas
 const queryApplicationLogsSchema = z.object({
   workspaceId: z.string(),
   query: z.string(),
   hoursBack: z.number(),
 });
+const queryApplicationLogsOutputSchema = z.array(z.record(z.string(), z.unknown()));
 
-const queryApplicationLogsOutputSchema = z.array(
-  z.record(z.string(), z.unknown())
-);
+const getExceptionsSchema = z.object({
+  workspaceId: z.string(),
+  hoursBack: z.number(),
+});
+const getExceptionsOutputSchema = z.array(z.record(z.string(), z.unknown()));
 
+const getFailedRequestsSchema = z.object({
+  workspaceId: z.string(),
+  hoursBack: z.number(),
+});
+const getFailedRequestsOutputSchema = z.array(z.record(z.string(), z.unknown()));
+
+const getPerformanceMetricsSchema = z.object({
+  workspaceId: z.string(),
+  hoursBack: z.number(),
+});
+const getPerformanceMetricsOutputSchema = z.array(z.record(z.string(), z.unknown()));
+
+// Azure Schemas
 const listResourceGroupsSchema = z.object({});
 const listResourceGroupsOutputSchema = z.array(
   z.object({ name: z.string(), location: z.string() }),
@@ -112,6 +128,26 @@ export class AzureToolProvider implements ToolProvider {
   private subscriptionClient: SubscriptionClient;
   private logsClient: LogsQueryClient;
   private webSiteClient: WebSiteManagementClient;
+  private async runLogsQuery(
+    workspaceId: string,
+    query: string,
+    hoursBack: number,
+  ): Promise<Record<string, unknown>[]> {
+    const result = await this.logsClient.queryWorkspace(workspaceId, query, {
+      duration: `PT${hoursBack}H`,
+    });
+    if (result.status !== 'Success') {
+      throw new Error(`Log query failed with status: ${result.status}`);
+    }
+    const table = result.tables[0];
+    if (!table) {
+      return [];
+    }
+    return table.rows.map((row) =>
+      Object.fromEntries(table.columnDescriptors.map((column, index) => [column.name, row[index]])),
+    );
+  }
+
   constructor(
     resourceClient: ResourceManagementClient,
     subscriptionClient: SubscriptionClient,
@@ -181,7 +217,25 @@ export class AzureToolProvider implements ToolProvider {
         name: 'azure.query_application_logs',
         description: 'Query application logs from Azure Monitor',
         inputSchema: queryApplicationLogsSchema,
-        outputSchema: queryApplicationLogsOutputSchema
+        outputSchema: queryApplicationLogsOutputSchema,
+      },
+      {
+        name: 'azure.get_exceptions',
+        description: 'Get exceptions logged in Application Insights',
+        inputSchema: getExceptionsSchema,
+        outputSchema: getExceptionsOutputSchema,
+      },
+      {
+        name: 'azure.get_failed_requests',
+        description: 'Get failed HTTP requests logged in Application Insights',
+        inputSchema: getFailedRequestsSchema,
+        outputSchema: getFailedRequestsOutputSchema,
+      },
+      {
+        name: 'azure.get_performance_metrics',
+        description: 'Get performance counter metrics logged in Application Insights',
+        inputSchema: getPerformanceMetricsSchema,
+        outputSchema: getPerformanceMetricsOutputSchema,
       },
     ];
   }
@@ -330,19 +384,21 @@ export class AzureToolProvider implements ToolProvider {
       };
     } else if (name === 'azure.query_application_logs') {
       const { workspaceId, query, hoursBack } = queryApplicationLogsSchema.parse(args);
-      const result = await this.logsClient.queryWorkspace(workspaceId, query, { duration: `PT${hoursBack}H` });
-      if (result.status !== 'Success') {
-        throw new Error(`Log query failed with status: ${result.status}`);
-      }
-      const table = result.tables[0];
-      if (!table) {
-        return [];
-      }
-      return table.rows.map((row) =>
-        Object.fromEntries(table.columnDescriptors.map((column, index) => [column.name, row[index]])),
+      return this.runLogsQuery(workspaceId, query, hoursBack);
+    } else if (name === 'azure.get_exceptions') {
+      const { workspaceId, hoursBack } = getExceptionsSchema.parse(args);
+      return this.runLogsQuery(workspaceId, 'AppExceptions | take 50', hoursBack);
+    } else if (name === 'azure.get_failed_requests') {
+      const { workspaceId, hoursBack } = getFailedRequestsSchema.parse(args);
+      return this.runLogsQuery(
+        workspaceId,
+        'AppRequests | where Success == false | take 50',
+        hoursBack,
       );
-    }
-    else {
+    } else if (name === 'azure.get_performance_metrics') {
+      const { workspaceId, hoursBack } = getPerformanceMetricsSchema.parse(args);
+      return this.runLogsQuery(workspaceId, 'AppPerformanceCounters | take 50', hoursBack);
+    } else {
       throw new Error(`Unknown tool: ${name}`);
     }
   }

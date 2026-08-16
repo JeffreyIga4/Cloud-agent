@@ -142,16 +142,14 @@ describe('AzureToolProvider', () => {
     const mockSubscriptionClient = {};
     const mockWebSiteClient = {
       webApps: {
-        listByResourceGroup: vi
-          .fn()
-          .mockReturnValue([
-            {
-              name: 'my-app',
-              location: 'eastus',
-              state: 'Running',
-              defaultHostName: 'my-app.azurewebsites.net',
-            },
-          ]),
+        listByResourceGroup: vi.fn().mockReturnValue([
+          {
+            name: 'my-app',
+            location: 'eastus',
+            state: 'Running',
+            defaultHostName: 'my-app.azurewebsites.net',
+          },
+        ]),
       },
     };
     const mockLogsClient = {};
@@ -316,8 +314,81 @@ describe('AzureToolProvider', () => {
       query: 'AppTraces | take 5',
       hoursBack: 24,
     });
-    expect(result).toEqual([
-      { Message: 'Server started', TimeGenerated: '2025-01-01T00:00:00Z' },
-    ]);
+    expect(result).toEqual([{ Message: 'Server started', TimeGenerated: '2025-01-01T00:00:00Z' }]);
+  });
+
+  it('gets exceptions using the injected logs client', async () => {
+  const mockResourceClient = {};
+  const mockSubscriptionClient = {};
+  const mockWebSiteClient = {};
+  const mockLogsClient = {
+    queryWorkspace: vi.fn().mockResolvedValue({
+      status: 'Success',
+      tables: [
+        {
+          columnDescriptors: [{ name: 'Message' }, { name: 'ExceptionType' }],
+          rows: [['Null reference', 'NullReferenceException']],
+        },
+      ],
+    }),
+  };
+  const provider = new AzureToolProvider(
+    mockResourceClient as unknown as ResourceManagementClient,
+    mockSubscriptionClient as unknown as SubscriptionClient,
+    mockWebSiteClient as unknown as WebSiteManagementClient,
+    mockLogsClient as unknown as LogsQueryClient,
+  );
+  const result = await provider.callTool('azure.get_exceptions', { workspaceId: 'test-workspace-id', hoursBack: 24 });
+  expect(result).toEqual([{ Message: 'Null reference', ExceptionType: 'NullReferenceException' }]);
+  });
+
+  it('gets failed requests using the injected logs client', async () => {
+    const mockResourceClient = {};
+    const mockSubscriptionClient = {};
+    const mockWebSiteClient = {};
+    const mockLogsClient = {
+      queryWorkspace: vi.fn().mockResolvedValue({
+        status: 'Success',
+        tables: [
+          {
+            columnDescriptors: [{ name: 'Name' }, { name: 'ResultCode' }],
+            rows: [['GET /api/counter', '500']],
+          },
+        ],
+      }),
+    };
+    const provider = new AzureToolProvider(
+      mockResourceClient as unknown as ResourceManagementClient,
+      mockSubscriptionClient as unknown as SubscriptionClient,
+      mockWebSiteClient as unknown as WebSiteManagementClient,
+      mockLogsClient as unknown as LogsQueryClient,
+    );
+    const result = await provider.callTool('azure.get_failed_requests', { workspaceId: 'test-workspace-id', hoursBack: 24 });
+    expect(result).toEqual([{ Name: 'GET /api/counter', ResultCode: '500' }]);
+  });
+
+  it('gets performance metrics using the injected logs client', async () => {
+    const mockResourceClient = {};
+    const mockSubscriptionClient = {};
+    const mockWebSiteClient = {};
+    const mockLogsClient = {
+      queryWorkspace: vi.fn().mockResolvedValue({
+        status: 'Success',
+        tables: [
+          {
+            columnDescriptors: [{ name: 'Name' }, { name: 'Value' }],
+            rows: [['CPU', '42']],
+          },
+        ],
+      }),
+    };
+    const provider = new AzureToolProvider(
+      mockResourceClient as unknown as ResourceManagementClient,
+      mockSubscriptionClient as unknown as SubscriptionClient,
+      mockWebSiteClient as unknown as WebSiteManagementClient,
+      mockLogsClient as unknown as LogsQueryClient,
+    );
+    const result = await provider.callTool('azure.get_performance_metrics', { workspaceId: 'test-workspace-id', hoursBack: 24 });
+    expect(result).toEqual([{ Name: 'CPU', Value: '42' }]);
   });
 });

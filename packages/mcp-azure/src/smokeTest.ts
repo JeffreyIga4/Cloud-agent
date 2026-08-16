@@ -25,7 +25,6 @@ const provider = new AzureToolProvider(
   logsClient,
 );
 
-/*
 const result = await provider.callTool('azure.list_resource_groups', {});
 console.log(result);
 const resourcesResult = await provider.callTool('azure.list_resources', {
@@ -55,10 +54,19 @@ const deploymentResult = await provider.callTool('azure.get_deployment', {
   deploymentName: 'Failure-Anomalies-Alert-Rule-Deployment-1ab7f1e9',
 });
 console.log(deploymentResult);
-*/
+
 const logsResult = await provider.callTool('azure.query_application_logs', {
   workspaceId: 'f374de6d-c7c6-45f6-9b57-51059729e9c0',
   query: 'AppTraces | take 5',
   hoursBack: 2160,
 });
 console.log(logsResult);
+
+const exceptionsResult = await provider.callTool('azure.get_exceptions', { workspaceId: 'f374de6d-c7c6-45f6-9b57-51059729e9c0', hoursBack: 2160 });
+console.log(exceptionsResult);
+
+const failedRequestsResult = await provider.callTool('azure.get_failed_requests', { workspaceId: 'f374de6d-c7c6-45f6-9b57-51059729e9c0', hoursBack: 2160 });
+console.log(failedRequestsResult);
+
+const performanceResult = await provider.callTool('azure.get_performance_metrics', { workspaceId: 'f374de6d-c7c6-45f6-9b57-51059729e9c0', hoursBack: 2160 });
+console.log(performanceResult);
