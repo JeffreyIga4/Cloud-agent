@@ -29,3 +29,7 @@ const appServicesResult = await provider.callTool('azure.list_app_services', { r
 console.log(appServicesResult);
 const statusResult = await provider.callTool('azure.get_app_service_status', { resourceGroup: 'resume-project-rg', name: 'GetResumeCounter-EU' });
 console.log(statusResult);
+const deploymentsResult = await provider.callTool('azure.list_deployments', { resourceGroup: 'resume-project-rg' });
+console.log(deploymentsResult);
+const deploymentResult = await provider.callTool('azure.get_deployment', { resourceGroup: 'resume-project-rg', deploymentName: 'Failure-Anomalies-Alert-Rule-Deployment-1ab7f1e9' });
+console.log(deploymentResult);

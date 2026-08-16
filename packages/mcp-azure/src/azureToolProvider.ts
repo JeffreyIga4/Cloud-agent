@@ -67,6 +67,35 @@ const getAppServiceStatusOutputSchema = z.object({
   state: z.enum(['Running', 'Stopped', 'Starting', 'Stopping', 'Unknown']),
 });
 
+
+const listDeploymentsSchema = z.object({
+  resourceGroup: z.string(),
+});
+
+const listDeploymentsOutputSchema = z.array(
+  z.object({
+    name: z.string(),
+    resourceGroup: z.string(),
+    location: z.string(),
+    state: z.string(),
+    timestamp: z.string(),
+  }),
+);
+
+const getDeploymentSchema = z.object({
+  resourceGroup: z.string(),
+  deploymentName: z.string(),
+});
+
+const getDeploymentOutputSchema = z.object({
+  name: z.string(),
+  resourceGroup: z.string(),
+  location: z.string(),
+  state: z.string(),
+  timestamp: z.string(),
+  error: z.string().optional(),
+});
+
 export class AzureToolProvider implements ToolProvider {
   private resourceClient: ResourceManagementClient;
   private subscriptionClient: SubscriptionClient;
@@ -117,6 +146,18 @@ export class AzureToolProvider implements ToolProvider {
         description: 'Get the status of a specific App Service',
         inputSchema: getAppServiceStatusSchema,
         outputSchema: getAppServiceStatusOutputSchema,
+      },
+      {
+        name: 'azure.list_deployments',
+        description: 'List deployments in a resource group',
+        inputSchema: listDeploymentsSchema,
+        outputSchema: listDeploymentsOutputSchema,
+      },
+      {
+        name: 'azure.get_deployment',
+        description: 'Get the full details of a specific deployment',
+        inputSchema: getDeploymentSchema,
+        outputSchema: getDeploymentOutputSchema,
       },
     ];
   }
@@ -222,7 +263,40 @@ export class AzureToolProvider implements ToolProvider {
         }
       }
       throw new Error(`App Service not found: ${resourceName}`);
-    } else {
+    } 
+    else if (name === 'azure.list_deployments') {
+      const { resourceGroup } = listDeploymentsSchema.parse(args);
+      const deployments: {
+        name: string;
+        resourceGroup: string;
+        location: string;
+        state: string;
+        timestamp: string;
+      }[] = [];
+      for await (const deployment of this.resourceClient.deployments.listByResourceGroup(resourceGroup)) {
+        deployments.push({
+          name: deployment.name ?? '',
+          resourceGroup,
+          location: deployment.location ?? '',
+          state: deployment.properties?.provisioningState ?? 'Unknown',
+          timestamp: deployment.properties?.timestamp?.toISOString() ?? '',
+        });
+      }
+      return deployments;
+    } 
+    else if (name === 'azure.get_deployment') {
+      const { resourceGroup, deploymentName } = getDeploymentSchema.parse(args);
+      const deployment = await this.resourceClient.deployments.get(resourceGroup, deploymentName);
+      return {
+        name: deployment.name ?? '',
+        resourceGroup,
+        location: deployment.location ?? '',
+        state: deployment.properties?.provisioningState ?? 'Unknown',
+        timestamp: deployment.properties?.timestamp?.toISOString() ?? '',
+        error: deployment.properties?.error?.message,
+      };
+    }
+    else {
       throw new Error(`Unknown tool: ${name}`);
     }
   }
