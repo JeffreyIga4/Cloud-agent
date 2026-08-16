@@ -265,4 +265,22 @@ describe('GitHubToolProvider', () => {
       { path: 'src/config.ts', repository: 'test/test-repo', snippets: ['const DATABASE_URL = process.env.DATABASE_URL;'] },
     ]);
   });
+
+  it('gets a pull request diff using the injected Octokit client', async () => {
+    const fakeOctokit = {
+      rest: {
+        pulls: {
+          get: vi.fn().mockResolvedValue({
+            data: '--- a/src/config.ts\n+++ b/src/config.ts\n@@ -1,1 +1,1 @@\n-const DATABASE_URL = "old";\n+const DATABASE_URL = "new";',
+          }),
+        },
+      },
+    } as unknown as Octokit;
+
+    const provider = new GitHubToolProvider(fakeOctokit);
+    const result = await provider.callTool('github.get_pull_request_diff', { owner: 'test', repo: 'test', pullNumber: 42 });
+    expect(result).toEqual({
+      diff: '--- a/src/config.ts\n+++ b/src/config.ts\n@@ -1,1 +1,1 @@\n-const DATABASE_URL = "old";\n+const DATABASE_URL = "new";',
+    });
+  });
 });

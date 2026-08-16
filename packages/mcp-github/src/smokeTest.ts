@@ -55,3 +55,6 @@ console.log(prDetailResult);
 
 const searchResult = await provider.callTool('github.search_code', { query: 'zod', repository: 'JeffreyIga4/Cloud-agent' });
 console.log(searchResult);
+
+const diffResult = await provider.callTool('github.get_pull_request_diff', { owner: 'JeffreyIga4', repo: 'Cloud-agent', pullNumber: 14 });
+console.log(diffResult);

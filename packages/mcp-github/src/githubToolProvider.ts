@@ -117,6 +117,16 @@ const searchCodeOutputSchema = z.array(
   }),
 );
 
+const getPullRequestDiffSchema = z.object({
+  owner: z.string(),
+  repo: z.string(),
+  pullNumber: z.number(),
+});
+
+const getPullRequestDiffOutputSchema = z.object({
+  diff: z.string(),
+});
+
 
 export class GitHubToolProvider implements ToolProvider {
   private octokit: Octokit;
@@ -181,6 +191,12 @@ export class GitHubToolProvider implements ToolProvider {
         description: 'Search for code across GitHub repositories',
         inputSchema: searchCodeSchema,
         outputSchema: searchCodeOutputSchema,
+      },
+      {
+        name: 'github.get_pull_request_diff',
+        description: 'Get the diff for a specific pull request in a GitHub repository',
+        inputSchema: getPullRequestDiffSchema,
+        outputSchema: getPullRequestDiffOutputSchema,
       }
     ];
   }
@@ -290,6 +306,15 @@ export class GitHubToolProvider implements ToolProvider {
         repository: item.repository.full_name,
         snippets: (item.text_matches ?? []).map((tm) => tm.fragment ?? ''),
       }));
+    }
+    else if (name === 'github.get_pull_request_diff') {
+      const { owner, repo, pullNumber } = getPullRequestDiffSchema.parse(args);
+      const response = await this.octokit.rest.pulls.get({ 
+        owner, 
+        repo, 
+        pull_number: pullNumber, 
+        mediaType: { format: 'diff' } });
+      return { diff: response.data };
     }
     else {
       throw new Error(`Unknown tool: ${name}`);
