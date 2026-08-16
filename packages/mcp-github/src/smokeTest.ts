@@ -52,3 +52,6 @@ const prDetailResult = await provider.callTool('github.get_pull_request', {
   pullNumber: 14,
 });
 console.log(prDetailResult);
+
+const searchResult = await provider.callTool('github.search_code', { query: 'zod', repository: 'JeffreyIga4/Cloud-agent' });
+console.log(searchResult);

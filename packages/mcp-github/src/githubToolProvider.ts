@@ -103,6 +103,21 @@ const getPullRequestOutputSchema = z.object({
   deletions: z.number(),
 });
 
+const searchCodeSchema = z.object({
+  query: z.string(),
+  repository: z.string(),
+  language: z.string().optional(),
+});
+
+const searchCodeOutputSchema = z.array(
+  z.object({
+    path: z.string(),
+    repository: z.string(),
+    snippets: z.array(z.string()),
+  }),
+);
+
+
 export class GitHubToolProvider implements ToolProvider {
   private octokit: Octokit;
 
@@ -161,6 +176,12 @@ export class GitHubToolProvider implements ToolProvider {
         inputSchema: getPullRequestSchema,
         outputSchema: getPullRequestOutputSchema,
       },
+      {
+        name: 'github.search_code',
+        description: 'Search for code across GitHub repositories',
+        inputSchema: searchCodeSchema,
+        outputSchema: searchCodeOutputSchema,
+      }
     ];
   }
 
@@ -259,7 +280,18 @@ export class GitHubToolProvider implements ToolProvider {
         additions: response.data.additions,
         deletions: response.data.deletions,
       };
-    } else {
+    } 
+    else if (name === 'github.search_code') {
+      const { query, repository, language } = searchCodeSchema.parse(args);
+      const q = `${query} repo:${repository}${language ? ' language:' + language : ''}`;
+      const response = await this.octokit.rest.search.code({ q });
+      return response.data.items.map((item) => ({
+        path: item.path,
+        repository: item.repository.full_name,
+        snippets: (item.text_matches ?? []).map((tm) => tm.fragment ?? ''),
+      }));
+    }
+    else {
       throw new Error(`Unknown tool: ${name}`);
     }
   }
