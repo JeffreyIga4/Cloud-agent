@@ -127,6 +127,53 @@ const getPullRequestDiffOutputSchema = z.object({
   diff: z.string(),
 });
 
+// CI/CD
+const listWorkflowsSchema = z.object({
+  owner: z.string(),
+  repo: z.string(),
+})
+
+const listWorkflowsOutputSchema = z.array(
+  z.object({
+    id: z.number(),
+    path: z.string(),
+    name: z.string(),
+    state: z.string(),
+  })
+);
+
+const listWorkflowRunsSchema = z.object({
+  owner: z.string(),
+  repo: z.string(),
+  workflowId: z.number().optional(),
+});
+
+const listWorkflowRunsOutputSchema  = z.array(
+  z.object ({
+    id: z.number(),
+    name: z.string(),
+    status: z.string(),
+    conclusion: z.string().nullable(),
+    headBranch: z.string(),
+  })
+);
+
+const getWorkflowRunSchema = z.object({
+  owner: z.string(),
+  repo: z.string(),
+  runId: z.number(),
+});
+
+const getWorkflowRunOutputSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  status: z.string(),
+  conclusion: z.string().nullable(),
+  headBranch: z.string(),
+  htmlUrl: z.string(),
+  createdAt: z.string(),
+});
+
 export class GitHubToolProvider implements ToolProvider {
   private octokit: Octokit;
 
@@ -197,6 +244,24 @@ export class GitHubToolProvider implements ToolProvider {
         inputSchema: getPullRequestDiffSchema,
         outputSchema: getPullRequestDiffOutputSchema,
       },
+      {
+        name: 'github.list_workflows',
+        description: 'List CI/CD workflows defined in a GitHub repository',
+        inputSchema: listWorkflowsSchema,
+        outputSchema: listWorkflowsOutputSchema,
+      },
+      {
+        name: 'github.list_workflow_runs',
+        description: 'List workflow runs for a repository, optionally scoped to one workflow',
+        inputSchema: listWorkflowRunsSchema,
+        outputSchema: listWorkflowRunsOutputSchema,
+      },
+      {
+        name: 'github.get_workflow_run',
+        description: 'Get details of a single GitHub Actions workflow run',
+        inputSchema: getWorkflowRunSchema,
+        outputSchema: getWorkflowRunOutputSchema,
+      },
     ];
   }
 
@@ -207,7 +272,8 @@ export class GitHubToolProvider implements ToolProvider {
       // Use the Octokit instance to list pull requests for the specified repository
       const response = await this.octokit.rest.pulls.list({ owner, repo, state });
       return response.data.map((pr) => ({ number: pr.number, title: pr.title, state: pr.state }));
-    } else if (name === 'github.list_commits') {
+    } 
+    else if (name === 'github.list_commits') {
       // Use the Octokit instance to list commits for the specified repository
       const { owner, repo } = listCommitsSchema.parse(args);
       const response = await this.octokit.rest.repos.listCommits({ owner, repo });
@@ -216,8 +282,9 @@ export class GitHubToolProvider implements ToolProvider {
         sha: commit.sha,
         message: commit.commit.message,
         author: commit.author?.login,
-      }));
-    } else if (name === 'github.get_repository') {
+    }));
+    } 
+    else if (name === 'github.get_repository') {
       const { owner, repo } = getRepositorySchema.parse(args);
       const response = await this.octokit.rest.repos.get({ owner, repo });
       // Map the response data to the expected output format
@@ -231,7 +298,8 @@ export class GitHubToolProvider implements ToolProvider {
         stars: response.data.stargazers_count,
         updatedAt: response.data.updated_at,
       };
-    } else if (name === 'github.list_files') {
+    } 
+    else if (name === 'github.list_files') {
       const { owner, repo, path, branch } = listFilesSchema.parse(args);
       const response = await this.octokit.rest.repos.getContent({ owner, repo, path, ref: branch });
       // Check if the response data is an array (indicating a directory)
@@ -242,8 +310,10 @@ export class GitHubToolProvider implements ToolProvider {
         name: entry.name,
         path: entry.path,
         type: entry.type,
+      
       }));
-    } else if (name === 'github.get_file') {
+    } 
+    else if (name === 'github.get_file') {
       const { owner, repo, path, branch } = getFileSchema.parse(args);
       const response = await this.octokit.rest.repos.getContent({ owner, repo, path, ref: branch });
       // Check if the response data is an array (indicating a directory)
@@ -313,7 +383,44 @@ export class GitHubToolProvider implements ToolProvider {
         mediaType: { format: 'diff' },
       });
       return { diff: response.data };
-    } else {
+    }
+    else if (name === 'github.list_workflows') {
+      const { owner, repo } = listWorkflowsSchema.parse(args);
+      const response = await this.octokit.rest.actions.listRepoWorkflows({ owner, repo });
+        return response.data.workflows.map((workflow) => ({
+        id: workflow.id,
+        path: workflow.path,
+        name: workflow.name,
+        state: workflow.state,
+        }));
+    }
+    else if (name === 'github.list_workflow_runs') {
+      const { owner, repo, workflowId } = listWorkflowRunsSchema.parse(args);
+      const response = workflowId
+        ? await this.octokit.rest.actions.listWorkflowRuns({ owner, repo, workflow_id: workflowId })
+        : await this.octokit.rest.actions.listWorkflowRunsForRepo({ owner, repo });
+      return response.data.workflow_runs.map((run) => ({
+        id: run.id,
+        name: run.name,
+        status: run.status,
+        conclusion: run.conclusion,
+        headBranch: run.head_branch,
+      }));
+    }
+    else if (name === 'github.get_workflow_run') {
+      const { owner, repo, runId } = getWorkflowRunSchema.parse(args);
+      const response = await this.octokit.rest.actions.getWorkflowRun({ owner, repo, run_id: runId});
+      return {
+        id: response.data.id,
+        headBranch: response.data.head_branch,
+        htmlUrl: response.data.html_url,
+        name: response.data.name,
+        createdAt: response.data.created_at,
+        conclusion: response.data.conclusion,
+        status: response.data.status
+      }
+    }
+    else {
       throw new Error(`Unknown tool: ${name}`);
     }
   }

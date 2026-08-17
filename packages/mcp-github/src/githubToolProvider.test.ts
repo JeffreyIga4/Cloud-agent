@@ -294,4 +294,64 @@ describe('GitHubToolProvider', () => {
       diff: '--- a/src/config.ts\n+++ b/src/config.ts\n@@ -1,1 +1,1 @@\n-const DATABASE_URL = "old";\n+const DATABASE_URL = "new";',
     });
   });
+  it('lists workflow runs for the whole repo when no workflowId is given', async () => {
+    const fakeOctokit = {
+      rest: {
+        actions: {
+          listWorkflowRunsForRepo: vi.fn().mockResolvedValue({
+            data: { workflow_runs: [{ id: 1, name: 'CI', status: 'completed', conclusion: 'success', head_branch: 'main' }] },
+          }),
+        },
+      },
+    } as unknown as Octokit;
+    const provider = new GitHubToolProvider(fakeOctokit);
+    const result = await provider.callTool('github.list_workflow_runs', { owner: 'test', repo: 'test' });
+    expect(result).toEqual([{ id: 1, name: 'CI', status: 'completed', conclusion: 'success', headBranch: 'main' }]);
+  });
+
+  it('lists workflow runs for one workflow when workflowId is given', async () => {
+    const fakeOctokit = {
+      rest: {
+        actions: {
+          listWorkflowRuns: vi.fn().mockResolvedValue({
+            data: { workflow_runs: [{ id: 2, name: 'Deploy', status: 'in_progress', conclusion: null, head_branch: 'feature-x' }] },
+          }),
+        },
+      },
+    } as unknown as Octokit;
+    const provider = new GitHubToolProvider(fakeOctokit);
+    const result = await provider.callTool('github.list_workflow_runs', { owner: 'test', repo: 'test', workflowId: 123 });
+    expect(result).toEqual([{ id: 2, name: 'Deploy', status: 'in_progress', conclusion: null, headBranch: 'feature-x' }]);
+  });
+
+  it('gets a single workflow run using the injected Octokit client', async () => {
+    const fakeOctokit = {
+      rest: {
+        actions: {
+          getWorkflowRun: vi.fn().mockResolvedValue({
+            data: {
+              id: 99,
+              name: 'CI',
+              status: 'completed',
+              conclusion: 'success',
+              head_branch: 'main',
+              html_url: 'https://github.com/test/test/actions/runs/99',
+              created_at: '2025-01-01T00:00:00Z',
+            },
+          }),
+        },
+      },
+    } as unknown as Octokit;
+    const provider = new GitHubToolProvider(fakeOctokit);
+    const result = await provider.callTool('github.get_workflow_run', { owner: 'test', repo: 'test', runId: 99 });
+    expect(result).toEqual({
+      id: 99,
+      name: 'CI',
+      status: 'completed',
+      conclusion: 'success',
+      headBranch: 'main',
+      htmlUrl: 'https://github.com/test/test/actions/runs/99',
+      createdAt: '2025-01-01T00:00:00Z',
+    });
+  });
 });
