@@ -62,11 +62,20 @@ const logsResult = await provider.callTool('azure.query_application_logs', {
 });
 console.log(logsResult);
 
-const exceptionsResult = await provider.callTool('azure.get_exceptions', { workspaceId: 'f374de6d-c7c6-45f6-9b57-51059729e9c0', hoursBack: 2160 });
+const exceptionsResult = await provider.callTool('azure.get_exceptions', {
+  workspaceId: 'f374de6d-c7c6-45f6-9b57-51059729e9c0',
+  hoursBack: 2160,
+});
 console.log(exceptionsResult);
 
-const failedRequestsResult = await provider.callTool('azure.get_failed_requests', { workspaceId: 'f374de6d-c7c6-45f6-9b57-51059729e9c0', hoursBack: 2160 });
+const failedRequestsResult = await provider.callTool('azure.get_failed_requests', {
+  workspaceId: 'f374de6d-c7c6-45f6-9b57-51059729e9c0',
+  hoursBack: 2160,
+});
 console.log(failedRequestsResult);
 
-const performanceResult = await provider.callTool('azure.get_performance_metrics', { workspaceId: 'f374de6d-c7c6-45f6-9b57-51059729e9c0', hoursBack: 2160 });
+const performanceResult = await provider.callTool('azure.get_performance_metrics', {
+  workspaceId: 'f374de6d-c7c6-45f6-9b57-51059729e9c0',
+  hoursBack: 2160,
+});
 console.log(performanceResult);
