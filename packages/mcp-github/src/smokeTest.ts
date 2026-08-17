@@ -6,7 +6,6 @@ const config = loadConfig();
 const octokit = new Octokit({ auth: config.GITHUB_TOKEN });
 const provider = new GitHubToolProvider(octokit);
 
-
 const result = await provider.callTool('github.list_pull_requests', {
   owner: 'JeffreyIga4',
   repo: 'Cloud-agent',
@@ -67,6 +66,21 @@ const diffResult = await provider.callTool('github.get_pull_request_diff', {
 });
 console.log(diffResult);
 
-
-const workflowsResult = await provider.callTool('github.list_workflows', { owner: 'JeffreyIga4', repo: 'Cloud-agent' });
+const workflowsResult = await provider.callTool('github.list_workflows', {
+  owner: 'JeffreyIga4',
+  repo: 'Cloud-agent',
+});
 console.log(workflowsResult);
+
+const workflowRunsResult = await provider.callTool('github.list_workflow_runs', {
+  owner: 'JeffreyIga4',
+  repo: 'Cloud-agent',
+});
+console.log(workflowRunsResult);
+
+const workflowRunResult = await provider.callTool('github.get_workflow_run', {
+  owner: 'JeffreyIga4',
+  repo: 'Cloud-agent',
+  runId: 32044845015,
+});
+console.log(workflowRunResult);

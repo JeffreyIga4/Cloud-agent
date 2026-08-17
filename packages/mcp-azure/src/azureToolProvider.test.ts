@@ -318,28 +318,33 @@ describe('AzureToolProvider', () => {
   });
 
   it('gets exceptions using the injected logs client', async () => {
-  const mockResourceClient = {};
-  const mockSubscriptionClient = {};
-  const mockWebSiteClient = {};
-  const mockLogsClient = {
-    queryWorkspace: vi.fn().mockResolvedValue({
-      status: 'Success',
-      tables: [
-        {
-          columnDescriptors: [{ name: 'Message' }, { name: 'ExceptionType' }],
-          rows: [['Null reference', 'NullReferenceException']],
-        },
-      ],
-    }),
-  };
-  const provider = new AzureToolProvider(
-    mockResourceClient as unknown as ResourceManagementClient,
-    mockSubscriptionClient as unknown as SubscriptionClient,
-    mockWebSiteClient as unknown as WebSiteManagementClient,
-    mockLogsClient as unknown as LogsQueryClient,
-  );
-  const result = await provider.callTool('azure.get_exceptions', { workspaceId: 'test-workspace-id', hoursBack: 24 });
-  expect(result).toEqual([{ Message: 'Null reference', ExceptionType: 'NullReferenceException' }]);
+    const mockResourceClient = {};
+    const mockSubscriptionClient = {};
+    const mockWebSiteClient = {};
+    const mockLogsClient = {
+      queryWorkspace: vi.fn().mockResolvedValue({
+        status: 'Success',
+        tables: [
+          {
+            columnDescriptors: [{ name: 'Message' }, { name: 'ExceptionType' }],
+            rows: [['Null reference', 'NullReferenceException']],
+          },
+        ],
+      }),
+    };
+    const provider = new AzureToolProvider(
+      mockResourceClient as unknown as ResourceManagementClient,
+      mockSubscriptionClient as unknown as SubscriptionClient,
+      mockWebSiteClient as unknown as WebSiteManagementClient,
+      mockLogsClient as unknown as LogsQueryClient,
+    );
+    const result = await provider.callTool('azure.get_exceptions', {
+      workspaceId: 'test-workspace-id',
+      hoursBack: 24,
+    });
+    expect(result).toEqual([
+      { Message: 'Null reference', ExceptionType: 'NullReferenceException' },
+    ]);
   });
 
   it('gets failed requests using the injected logs client', async () => {
@@ -363,7 +368,10 @@ describe('AzureToolProvider', () => {
       mockWebSiteClient as unknown as WebSiteManagementClient,
       mockLogsClient as unknown as LogsQueryClient,
     );
-    const result = await provider.callTool('azure.get_failed_requests', { workspaceId: 'test-workspace-id', hoursBack: 24 });
+    const result = await provider.callTool('azure.get_failed_requests', {
+      workspaceId: 'test-workspace-id',
+      hoursBack: 24,
+    });
     expect(result).toEqual([{ Name: 'GET /api/counter', ResultCode: '500' }]);
   });
 
@@ -388,7 +396,10 @@ describe('AzureToolProvider', () => {
       mockWebSiteClient as unknown as WebSiteManagementClient,
       mockLogsClient as unknown as LogsQueryClient,
     );
-    const result = await provider.callTool('azure.get_performance_metrics', { workspaceId: 'test-workspace-id', hoursBack: 24 });
+    const result = await provider.callTool('azure.get_performance_metrics', {
+      workspaceId: 'test-workspace-id',
+      hoursBack: 24,
+    });
     expect(result).toEqual([{ Name: 'CPU', Value: '42' }]);
   });
 });
