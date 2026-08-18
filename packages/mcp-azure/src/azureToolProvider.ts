@@ -135,6 +135,17 @@ const restartAppServiceOutputSchema = z.object({
   message: z.string(),
 });
 
+const getAppServiceConfigurationSchema = z.object({
+  resourceGroup: z.string(),
+  name: z.string(),
+});
+
+const getAppServiceConfigurationOutputSchema = z.array(
+  z.object({
+    name: z.string(),
+  })
+);
+
 export class AzureToolProvider implements ToolProvider {
   private resourceClient: ResourceManagementClient;
   private subscriptionClient: SubscriptionClient;
@@ -254,6 +265,12 @@ export class AzureToolProvider implements ToolProvider {
         description: 'Restart an app service. Requires explicit confirmation',
         inputSchema: restartAppServiceSchema,
         outputSchema: restartAppServiceOutputSchema,
+      },
+      {
+        name: 'azure.get_app_service_configuration',
+        description: 'Get non-secret application configuration variable names for an App Service. Never returns secret values.',
+        inputSchema: getAppServiceConfigurationSchema,
+        outputSchema: getAppServiceConfigurationOutputSchema,
       },
     ];
   }
@@ -429,7 +446,12 @@ export class AzureToolProvider implements ToolProvider {
         resourceGroup,
         message: `App service '${appName}' restarted successfully.`,
       };
-    } else {
+    } else if (name === 'azure.get_app_service_configuration') {
+      const { resourceGroup, name: appName } = getAppServiceConfigurationSchema.parse(args);
+      const response = await this.webSiteClient.webApps.listApplicationSettings(resourceGroup, appName);
+      return Object.keys(response.properties ?? {}).map((key) => ({ name: key }));
+    }
+    else {
       throw new Error(`Unknown tool: ${name}`);
     }
   }

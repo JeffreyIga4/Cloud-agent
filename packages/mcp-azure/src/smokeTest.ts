@@ -86,3 +86,9 @@ const restartResult = await provider.callTool('azure.restart_app_service', {
   confirm: true,
 });
 console.log(restartResult);
+
+const configResult = await provider.callTool('azure.get_app_service_configuration', {
+  resourceGroup: 'resume-project-rg',
+  name: 'GetResumeCounter-EU',
+});
+console.log(configResult);

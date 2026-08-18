@@ -448,4 +448,24 @@ describe('AzureToolProvider', () => {
       message: "App service 'my-app' restarted successfully.",
     });
   });
+  it('gets app service configuration variable names using the injected clients', async () => {
+    const mockResourceClient = {};
+    const mockSubscriptionClient = {};
+    const mockWebSiteClient = {
+      webApps: {
+        listApplicationSettings: vi.fn().mockResolvedValue({
+          properties: { NODE_ENV: 'production', DATABASE_URL: 'postgres://user:pass@host/db' },
+        }),
+      },
+    };
+    const mockLogsClient = {};
+    const provider = new AzureToolProvider(
+      mockResourceClient as unknown as ResourceManagementClient,
+      mockSubscriptionClient as unknown as SubscriptionClient,
+      mockWebSiteClient as unknown as WebSiteManagementClient,
+      mockLogsClient as unknown as LogsQueryClient,
+    );
+    const result = await provider.callTool('azure.get_app_service_configuration', { resourceGroup: 'test-rg', name: 'my-app' });
+    expect(result).toEqual([{ name: 'NODE_ENV' }, { name: 'DATABASE_URL' }]);
+  });
 });
