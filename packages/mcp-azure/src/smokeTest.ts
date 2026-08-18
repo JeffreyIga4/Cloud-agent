@@ -79,3 +79,10 @@ const performanceResult = await provider.callTool('azure.get_performance_metrics
   hoursBack: 2160,
 });
 console.log(performanceResult);
+
+const restartResult = await provider.callTool('azure.restart_app_service', {
+  resourceGroup: 'resume-project-rg',
+  name: 'GetResumeCounter-EU',
+  confirm: true,
+});
+console.log(restartResult);

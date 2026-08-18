@@ -123,6 +123,18 @@ const getDeploymentOutputSchema = z.object({
   error: z.string().optional(),
 });
 
+const restartAppServiceSchema = z.object({
+  resourceGroup: z.string(),
+  name: z.string(),
+  confirm: z.boolean(),
+});
+
+const restartAppServiceOutputSchema = z.object({
+  name: z.string(),
+  resourceGroup: z.string(),
+  message: z.string(),
+});
+
 export class AzureToolProvider implements ToolProvider {
   private resourceClient: ResourceManagementClient;
   private subscriptionClient: SubscriptionClient;
@@ -236,6 +248,12 @@ export class AzureToolProvider implements ToolProvider {
         description: 'Get performance counter metrics logged in Application Insights',
         inputSchema: getPerformanceMetricsSchema,
         outputSchema: getPerformanceMetricsOutputSchema,
+      },
+      {
+        name: 'azure.restart_app_service',
+        description: 'Restart an app service. Requires explicit confirmation',
+        inputSchema: restartAppServiceSchema,
+        outputSchema: restartAppServiceOutputSchema,
       },
     ];
   }
@@ -398,6 +416,19 @@ export class AzureToolProvider implements ToolProvider {
     } else if (name === 'azure.get_performance_metrics') {
       const { workspaceId, hoursBack } = getPerformanceMetricsSchema.parse(args);
       return this.runLogsQuery(workspaceId, 'AppPerformanceCounters | take 50', hoursBack);
+    } else if (name === 'azure.restart_app_service') {
+      const { resourceGroup, name: appName, confirm } = restartAppServiceSchema.parse(args);
+      if (!confirm) {
+        throw new Error(
+          'Restarting an app service requires explicit confirmation. Pass confirm: true to proceed.',
+        );
+      }
+      await this.webSiteClient.webApps.restart(resourceGroup, appName);
+      return {
+        name: appName,
+        resourceGroup,
+        message: `App service '${appName}' restarted successfully.`,
+      };
     } else {
       throw new Error(`Unknown tool: ${name}`);
     }
