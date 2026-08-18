@@ -402,4 +402,50 @@ describe('AzureToolProvider', () => {
     });
     expect(result).toEqual([{ Name: 'CPU', Value: '42' }]);
   });
+  it('refuses to restart an app service without confirmation', async () => {
+    const mockResourceClient = {};
+    const mockSubscriptionClient = {};
+    const mockWebSiteClient = {};
+    const mockLogsClient = {};
+    const provider = new AzureToolProvider(
+      mockResourceClient as unknown as ResourceManagementClient,
+      mockSubscriptionClient as unknown as SubscriptionClient,
+      mockWebSiteClient as unknown as WebSiteManagementClient,
+      mockLogsClient as unknown as LogsQueryClient,
+    );
+    await expect(
+      provider.callTool('azure.restart_app_service', {
+        resourceGroup: 'test-rg',
+        name: 'my-app',
+        confirm: false,
+      }),
+    ).rejects.toThrow('Restarting an app service requires explicit confirmation');
+  });
+
+  it('restarts an app service when confirmed', async () => {
+    const mockResourceClient = {};
+    const mockSubscriptionClient = {};
+    const mockWebSiteClient = {
+      webApps: {
+        restart: vi.fn().mockResolvedValue(undefined),
+      },
+    };
+    const mockLogsClient = {};
+    const provider = new AzureToolProvider(
+      mockResourceClient as unknown as ResourceManagementClient,
+      mockSubscriptionClient as unknown as SubscriptionClient,
+      mockWebSiteClient as unknown as WebSiteManagementClient,
+      mockLogsClient as unknown as LogsQueryClient,
+    );
+    const result = await provider.callTool('azure.restart_app_service', {
+      resourceGroup: 'test-rg',
+      name: 'my-app',
+      confirm: true,
+    });
+    expect(result).toEqual({
+      name: 'my-app',
+      resourceGroup: 'test-rg',
+      message: "App service 'my-app' restarted successfully.",
+    });
+  });
 });
