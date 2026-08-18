@@ -174,6 +174,20 @@ const getWorkflowRunOutputSchema = z.object({
   createdAt: z.string(),
 });
 
+const createIssueSchema = z.object({
+  owner: z.string(),
+  repo: z.string(),
+  title: z.string(),
+  body: z.string().optional(),
+  confirm: z.boolean(),
+});
+
+const createIssueOutputSchema = z.object({
+  number: z.number(),
+  url: z.string(),
+  title: z.string(),
+});
+
 export class GitHubToolProvider implements ToolProvider {
   private octokit: Octokit;
 
@@ -261,6 +275,12 @@ export class GitHubToolProvider implements ToolProvider {
         description: 'Get details of a single GitHub Actions workflow run',
         inputSchema: getWorkflowRunSchema,
         outputSchema: getWorkflowRunOutputSchema,
+      },
+      {
+        name: 'github.create_issue',
+        description: 'Create a new issue in a GitHub repository. Requires explicit confirmation.',
+        inputSchema: createIssueSchema,
+        outputSchema: createIssueOutputSchema,
       },
     ];
   }
@@ -414,6 +434,19 @@ export class GitHubToolProvider implements ToolProvider {
         createdAt: response.data.created_at,
         conclusion: response.data.conclusion,
         status: response.data.status,
+      };
+    } else if (name === 'github.create_issue') {
+      const { owner, repo, title, body, confirm } = createIssueSchema.parse(args);
+      if (!confirm) {
+        throw new Error(
+          'Creating an issue requires explicit confirmation. Pass confirm: true to proceed.',
+        );
+      }
+      const response = await this.octokit.rest.issues.create({ owner, repo, title, body });
+      return {
+        number: response.data.number,
+        url: response.data.html_url,
+        title: response.data.title,
       };
     } else {
       throw new Error(`Unknown tool: ${name}`);

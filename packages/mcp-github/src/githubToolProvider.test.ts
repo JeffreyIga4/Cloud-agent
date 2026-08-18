@@ -411,4 +411,40 @@ describe('GitHubToolProvider', () => {
       { id: 1, path: '.github/workflows/ci.yml', name: 'CI', state: 'active' },
     ]);
   });
+  it('refuses to create an issue without confirmation', async () => {
+    const fakeOctokit = {} as unknown as Octokit;
+    const provider = new GitHubToolProvider(fakeOctokit);
+    await expect(
+      provider.callTool('github.create_issue', {
+        owner: 'test',
+        repo: 'test',
+        title: 'Bug',
+        confirm: false,
+      }),
+    ).rejects.toThrow('Creating an issue requires explicit confirmation');
+  });
+
+  it('creates an issue when confirmed', async () => {
+    const fakeOctokit = {
+      rest: {
+        issues: {
+          create: vi.fn().mockResolvedValue({
+            data: { number: 5, html_url: 'https://github.com/test/test/issues/5', title: 'Bug' },
+          }),
+        },
+      },
+    } as unknown as Octokit;
+    const provider = new GitHubToolProvider(fakeOctokit);
+    const result = await provider.callTool('github.create_issue', {
+      owner: 'test',
+      repo: 'test',
+      title: 'Bug',
+      confirm: true,
+    });
+    expect(result).toEqual({
+      number: 5,
+      url: 'https://github.com/test/test/issues/5',
+      title: 'Bug',
+    });
+  });
 });
