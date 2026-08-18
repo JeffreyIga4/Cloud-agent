@@ -38,3 +38,12 @@ console.log(prResult);
 
 const rgResult = await runtime.runTool('azure.list_resource_groups', {});
 console.log(rgResult);
+
+const listDeploymentsResult = await runtime.runTool('azure.list_deployments', { resourceGroup: 'resume-project-rg' });
+console.log(listDeploymentsResult);
+
+const getDeploymentResult = await runtime.runTool('azure.get_deployment', {
+  resourceGroup: 'resume-project-rg',
+  deploymentName: 'Failure-Anomalies-Alert-Rule-Deployment-1ab7f1e9',
+});
+console.log(getDeploymentResult);

@@ -23,13 +23,14 @@ export class ToolRouter implements ToolProvider {
   async callTool(name: string, args: unknown): Promise<unknown> {
     for (const provider of this.providers) {
       const tools = await provider.listTools();
-      const found = tools.some((tool) => tool.name === name);
-      if (found) {
+      const matchedTool = tools.find((tool) => tool.name === name);
+      if (matchedTool) {
         log('info', `Calling tool: ${name}`);
         try {
           const result = await provider.callTool(name, args);
+          const validatedResult = matchedTool.outputSchema.parse(result);
           log('info', `Tool succeeded: ${name}`);
-          return result;
+          return validatedResult;
         } catch (error) {
           log('error', `Tool failed: ${name} — ${error instanceof Error ? error.message : String(error)}`);
           throw error;
