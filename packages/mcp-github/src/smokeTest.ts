@@ -84,3 +84,12 @@ const workflowRunResult = await provider.callTool('github.get_workflow_run', {
   runId: 32044845015,
 });
 console.log(workflowRunResult);
+
+const createIssueResult = await provider.callTool('github.create_issue', {
+  owner: 'JeffreyIga4',
+  repo: 'Cloud-agent',
+  title: '[TEST] Verifying create_issue tool',
+  body: 'This issue was created by smokeTest.ts to verify the create_issue tool works against the real API. Safe to close.',
+  confirm: true,
+});
+console.log(createIssueResult);
