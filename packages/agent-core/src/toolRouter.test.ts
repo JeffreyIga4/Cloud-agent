@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { ToolRouter } from './toolRouter.js';
 import { FakeToolProvider } from '@cloud-agent/shared';
 
@@ -19,5 +19,20 @@ describe('ToolRouter', () => {
   it('should throw an error for unknown tools', async () => {
     const router = new ToolRouter([new FakeToolProvider()]);
     await expect(router.callTool('nonexistent', {})).rejects.toThrow();
+  });
+
+  // checking if the failure path actually logs and re-throws correctly, not just the success path
+  it('logs and re-throws when a tool call fails', async () => {
+    const failingProvider = {
+      listTools: async () => [{ name: 'willFail', description: '', inputSchema: {} as any, outputSchema: {} as any }],
+      callTool: async () => { throw new Error('Something broke'); },
+    };
+    const router = new ToolRouter([failingProvider]);
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    await expect(router.callTool('willFail', {})).rejects.toThrow('Something broke');
+    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('Tool failed: willFail'));
+
+    logSpy.mockRestore();
   });
 });

@@ -1,4 +1,4 @@
-import { Tool, ToolProvider } from '@cloud-agent/shared';
+import { Tool, ToolProvider, log } from '@cloud-agent/shared';
 
 export class ToolRouter implements ToolProvider {
   private providers: ToolProvider[];
@@ -23,12 +23,17 @@ export class ToolRouter implements ToolProvider {
   async callTool(name: string, args: unknown): Promise<unknown> {
     for (const provider of this.providers) {
       const tools = await provider.listTools();
-
-      // Check if the tool exists in the current provider
       const found = tools.some((tool) => tool.name === name);
       if (found) {
-        // If the tool is found, call it using the provider's callTool method
-        return await provider.callTool(name, args);
+        log('info', `Calling tool: ${name}`);
+        try {
+          const result = await provider.callTool(name, args);
+          log('info', `Tool succeeded: ${name}`);
+          return result;
+        } catch (error) {
+          log('error', `Tool failed: ${name} — ${error instanceof Error ? error.message : String(error)}`);
+          throw error;
+        }
       }
     }
     throw new Error(`Unknown tool: ${name}`);
