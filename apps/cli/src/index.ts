@@ -8,6 +8,7 @@ import { ResourceManagementClient } from '@azure/arm-resources';
 import { SubscriptionClient } from '@azure/arm-resources-subscriptions';
 import { WebSiteManagementClient } from '@azure/arm-appservice';
 import { LogsQueryClient } from '@azure/monitor-query-logs';
+import { Command } from 'commander';
 
 const config = loadConfig();
 const octokit = new Octokit({ auth: config.GITHUB_TOKEN });
@@ -29,21 +30,20 @@ const azureProvider = new AzureToolProvider(
 );
 const router = new ToolRouter([githubProvider, azureProvider]);
 const runtime = new AgentRuntime(router);
-const prResult = await runtime.runTool('github.list_pull_requests', {
-  owner: 'JeffreyIga4',
-  repo: 'Cloud-agent',
-  state: 'all',
-});
-console.log(prResult);
 
-const rgResult = await runtime.runTool('azure.list_resource_groups', {});
-console.log(rgResult);
+const program = new Command();
 
-const listDeploymentsResult = await runtime.runTool('azure.list_deployments', { resourceGroup: 'resume-project-rg' });
-console.log(listDeploymentsResult);
+program
+  .name('cloud-agent')
+  .description('AI-powered cloud operations agent')
+  .version('1.0.0');
 
-const getDeploymentResult = await runtime.runTool('azure.get_deployment', {
-  resourceGroup: 'resume-project-rg',
-  deploymentName: 'Failure-Anomalies-Alert-Rule-Deployment-1ab7f1e9',
-});
-console.log(getDeploymentResult);
+program
+  .command('diagnose')
+  .description('Investigate why an application is failing')
+  .argument('<appName>', 'name of the application to diagnose')
+  .action(async (appName) => {
+    console.log(`Diagnosing: ${appName}`);
+  });
+
+program.parse();
