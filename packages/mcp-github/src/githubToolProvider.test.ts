@@ -38,7 +38,7 @@ describe('GitHubToolProvider', () => {
             data: [
               {
                 sha: 'abc123',
-                commit: { message: 'Initial commit' },
+                commit: { message: 'Initial commit', author: { date: '2025-01-01T00:00:00Z' } },
                 author: { login: 'testuser' },
               },
             ],
@@ -49,7 +49,7 @@ describe('GitHubToolProvider', () => {
 
     const provider = new GitHubToolProvider(fakeOctokit);
     const result = await provider.callTool('github.list_commits', { owner: 'test', repo: 'test' });
-    expect(result).toEqual([{ sha: 'abc123', message: 'Initial commit', author: 'testuser' }]);
+    expect(result).toEqual([{ sha: 'abc123', message: 'Initial commit', author: 'testuser', timestamp: '2025-01-01T00:00:00Z' }]);
   });
 
   it('gets repository details using the injected Octokit client', async () => {

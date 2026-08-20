@@ -211,7 +211,7 @@ export class GitHubToolProvider implements ToolProvider {
         description: 'List commits for a GitHub repository',
         inputSchema: listCommitsSchema,
         outputSchema: z.array(
-          z.object({ sha: z.string(), message: z.string(), author: z.string().optional() }),
+          z.object({ sha: z.string(), message: z.string(), author: z.string().optional(), timestamp: z.string() }),
         ),
       },
       {
@@ -301,6 +301,7 @@ export class GitHubToolProvider implements ToolProvider {
         sha: commit.sha,
         message: commit.commit.message,
         author: commit.author?.login,
+        timestamp: commit.commit.author?.date ?? '',
       }));
     } else if (name === 'github.get_repository') {
       const { owner, repo } = getRepositorySchema.parse(args);

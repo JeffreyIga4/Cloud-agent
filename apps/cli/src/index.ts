@@ -42,8 +42,34 @@ program
   .command('diagnose')
   .description('Investigate why an application is failing')
   .argument('<appName>', 'name of the application to diagnose')
-  .action(async (appName) => {
-    console.log(`Diagnosing: ${appName}`);
+  .requiredOption('--resource-group <resourceGroup>', 'Azure resource group containing the app')
+  .requiredOption('--workspace-id <workspaceId>', 'Application Insights workspace ID')
+  .requiredOption('--owner <owner>', 'GitHub repository owner')
+  .requiredOption('--repo <repo>', 'GitHub repository name')
+  .action(async (appName, options) => {
+    const statusResult = await runtime.runTool('azure.get_app_service_status', {
+      resourceGroup: options.resourceGroup,
+      name: appName,
+    });
+
+    const failedRequestsResult = await runtime.runTool('azure.get_failed_requests', {
+      workspaceId: options.workspaceId,
+      hoursBack: 24,
+    });
+
+    const exceptionsResult = await runtime.runTool('azure.get_exceptions', {
+      workspaceId: options.workspaceId,
+      hoursBack: 24,
+    });
+
+    const listDeploymentsResult = await runtime.runTool('azure.list_deployments', {
+      resourceGroup: options.resourceGroup,
+    });
+
+    const listCommitsResult = await runtime.runTool('github.list_commits', {
+      owner: options.owner,
+      repo: options.repo,
+    });
   });
 
 program.parse();
