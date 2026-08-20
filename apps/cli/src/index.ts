@@ -13,6 +13,7 @@ import {
   correlateDeploymentWithCommit,
   buildHealthyReport,
   buildIncidentReport,
+  printIncidentReport,
 } from './incidentWorkflow.js';
 
 const config = loadConfig();
@@ -71,7 +72,7 @@ program
 
     if (!hasFailures) {
       const report = buildHealthyReport(appName, statusResult);
-      console.log(report);
+      printIncidentReport(report);
       return;
     }
 
@@ -123,7 +124,7 @@ program
       correlation,
       pullRequestResult,
     );
-    console.log(report);
+    printIncidentReport(report);
   });
 
 program.parse();
