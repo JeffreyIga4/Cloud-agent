@@ -19,6 +19,7 @@ const commitsResult = await provider.callTool('github.list_commits', {
 });
 console.log(commitsResult);
 
+/*
 const repoResult = await provider.callTool('github.get_repository', {
   owner: 'JeffreyIga4',
   repo: 'Cloud-agent',
@@ -93,3 +94,4 @@ const createIssueResult = await provider.callTool('github.create_issue', {
   confirm: true,
 });
 console.log(createIssueResult);
+*/
