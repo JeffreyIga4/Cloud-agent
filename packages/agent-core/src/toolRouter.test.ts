@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
+import { z } from 'zod';
 import { ToolRouter } from './toolRouter.js';
 import { FakeToolProvider } from '@cloud-agent/shared';
 
@@ -25,7 +26,7 @@ describe('ToolRouter', () => {
   it('logs and re-throws when a tool call fails', async () => {
     const failingProvider = {
       listTools: async () => [
-        { name: 'willFail', description: '', inputSchema: {} as any, outputSchema: {} as any },
+        { name: 'willFail', description: '', inputSchema: z.unknown(), outputSchema: z.unknown() },
       ],
       callTool: async () => {
         throw new Error('Something broke');

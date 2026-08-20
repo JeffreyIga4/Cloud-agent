@@ -1,4 +1,12 @@
-export { correlateDeploymentWithCommit, buildHealthyReport, buildIncidentReport, printIncidentReport };
+import { createInterface } from 'node:readline/promises';
+
+export {
+  correlateDeploymentWithCommit,
+  buildHealthyReport,
+  buildIncidentReport,
+  printIncidentReport,
+  confirmAction,
+};
 
 function correlateDeploymentWithCommit(
   deploymentTimestamp: string,
@@ -115,4 +123,11 @@ function printIncidentReport(report: {
   console.log('');
   console.log('Recommended Action:');
   console.log(report.recommendedAction);
+}
+
+async function confirmAction(question: string): Promise<boolean> {
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  const answer = await rl.question(`${question} [y/N] `);
+  rl.close();
+  return answer.trim().toLowerCase() === 'y';
 }
