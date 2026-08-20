@@ -465,7 +465,10 @@ describe('AzureToolProvider', () => {
       mockWebSiteClient as unknown as WebSiteManagementClient,
       mockLogsClient as unknown as LogsQueryClient,
     );
-    const result = await provider.callTool('azure.get_app_service_configuration', { resourceGroup: 'test-rg', name: 'my-app' });
+    const result = await provider.callTool('azure.get_app_service_configuration', {
+      resourceGroup: 'test-rg',
+      name: 'my-app',
+    });
     expect(result).toEqual([{ name: 'NODE_ENV' }, { name: 'DATABASE_URL' }]);
   });
 });
