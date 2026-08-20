@@ -24,8 +24,12 @@ describe('ToolRouter', () => {
   // checking if the failure path actually logs and re-throws correctly, not just the success path
   it('logs and re-throws when a tool call fails', async () => {
     const failingProvider = {
-      listTools: async () => [{ name: 'willFail', description: '', inputSchema: {} as any, outputSchema: {} as any }],
-      callTool: async () => { throw new Error('Something broke'); },
+      listTools: async () => [
+        { name: 'willFail', description: '', inputSchema: {} as any, outputSchema: {} as any },
+      ],
+      callTool: async () => {
+        throw new Error('Something broke');
+      },
     };
     const router = new ToolRouter([failingProvider]);
     const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});

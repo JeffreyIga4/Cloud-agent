@@ -32,7 +32,10 @@ export class ToolRouter implements ToolProvider {
           log('info', `Tool succeeded: ${name}`);
           return validatedResult;
         } catch (error) {
-          log('error', `Tool failed: ${name} — ${error instanceof Error ? error.message : String(error)}`);
+          log(
+            'error',
+            `Tool failed: ${name} — ${error instanceof Error ? error.message : String(error)}`,
+          );
           throw error;
         }
       }

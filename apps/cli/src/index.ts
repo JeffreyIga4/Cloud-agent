@@ -9,6 +9,11 @@ import { SubscriptionClient } from '@azure/arm-resources-subscriptions';
 import { WebSiteManagementClient } from '@azure/arm-appservice';
 import { LogsQueryClient } from '@azure/monitor-query-logs';
 import { Command } from 'commander';
+import {
+  correlateDeploymentWithCommit,
+  buildHealthyReport,
+  buildIncidentReport,
+} from './incidentWorkflow.js';
 
 const config = loadConfig();
 const octokit = new Octokit({ auth: config.GITHUB_TOKEN });
@@ -33,10 +38,7 @@ const runtime = new AgentRuntime(router);
 
 const program = new Command();
 
-program
-  .name('cloud-agent')
-  .description('AI-powered cloud operations agent')
-  .version('1.0.0');
+program.name('cloud-agent').description('AI-powered cloud operations agent').version('1.0.0');
 
 program
   .command('diagnose')
@@ -47,29 +49,81 @@ program
   .requiredOption('--owner <owner>', 'GitHub repository owner')
   .requiredOption('--repo <repo>', 'GitHub repository name')
   .action(async (appName, options) => {
-    const statusResult = await runtime.runTool('azure.get_app_service_status', {
+    const statusResult = (await runtime.runTool('azure.get_app_service_status', {
       resourceGroup: options.resourceGroup,
       name: appName,
-    });
+    })) as { state: string };
 
-    const failedRequestsResult = await runtime.runTool('azure.get_failed_requests', {
+    const failedRequestsResult = (await runtime.runTool('azure.get_failed_requests', {
       workspaceId: options.workspaceId,
       hoursBack: 24,
-    });
+    })) as unknown[];
 
-    const exceptionsResult = await runtime.runTool('azure.get_exceptions', {
+    const exceptionsResult = (await runtime.runTool('azure.get_exceptions', {
       workspaceId: options.workspaceId,
       hoursBack: 24,
-    });
+    })) as unknown[];
 
-    const listDeploymentsResult = await runtime.runTool('azure.list_deployments', {
+    const hasFailures =
+      statusResult.state !== 'Running' ||
+      failedRequestsResult.length > 0 ||
+      exceptionsResult.length > 0;
+
+    if (!hasFailures) {
+      const report = buildHealthyReport(appName, statusResult);
+      console.log(report);
+      return;
+    }
+
+    const listDeploymentsResult = (await runtime.runTool('azure.list_deployments', {
       resourceGroup: options.resourceGroup,
-    });
+    })) as {
+      name: string;
+      resourceGroup: string;
+      location: string;
+      state: string;
+      timestamp: string;
+    }[];
 
-    const listCommitsResult = await runtime.runTool('github.list_commits', {
+    const listCommitsResult = (await runtime.runTool('github.list_commits', {
       owner: options.owner,
       repo: options.repo,
-    });
+    })) as { sha: string; message: string; author?: string; timestamp: string }[];
+
+    const correlation = correlateDeploymentWithCommit(
+      listDeploymentsResult[0].timestamp,
+      listCommitsResult,
+    );
+
+    const prMatch = correlation.commit.message.match(/Merge pull request #(\d+)/);
+
+    let pullRequestResult: { number: number; title: string } | null = null;
+    let pullRequestDiffResult = null;
+
+    if (prMatch) {
+      const pullNumber = Number(prMatch[1]);
+      pullRequestResult = (await runtime.runTool('github.get_pull_request', {
+        owner: options.owner,
+        repo: options.repo,
+        pullNumber,
+      })) as { number: number; title: string };
+      pullRequestDiffResult = await runtime.runTool('github.get_pull_request_diff', {
+        owner: options.owner,
+        repo: options.repo,
+        pullNumber,
+      });
+    }
+
+    const report = buildIncidentReport(
+      appName,
+      statusResult,
+      failedRequestsResult,
+      exceptionsResult,
+      listDeploymentsResult[0],
+      correlation,
+      pullRequestResult,
+    );
+    console.log(report);
   });
 
 program.parse();

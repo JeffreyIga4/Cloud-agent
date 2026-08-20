@@ -143,7 +143,7 @@ const getAppServiceConfigurationSchema = z.object({
 const getAppServiceConfigurationOutputSchema = z.array(
   z.object({
     name: z.string(),
-  })
+  }),
 );
 
 export class AzureToolProvider implements ToolProvider {
@@ -268,7 +268,8 @@ export class AzureToolProvider implements ToolProvider {
       },
       {
         name: 'azure.get_app_service_configuration',
-        description: 'Get non-secret application configuration variable names for an App Service. Never returns secret values.',
+        description:
+          'Get non-secret application configuration variable names for an App Service. Never returns secret values.',
         inputSchema: getAppServiceConfigurationSchema,
         outputSchema: getAppServiceConfigurationOutputSchema,
       },
@@ -448,10 +449,12 @@ export class AzureToolProvider implements ToolProvider {
       };
     } else if (name === 'azure.get_app_service_configuration') {
       const { resourceGroup, name: appName } = getAppServiceConfigurationSchema.parse(args);
-      const response = await this.webSiteClient.webApps.listApplicationSettings(resourceGroup, appName);
+      const response = await this.webSiteClient.webApps.listApplicationSettings(
+        resourceGroup,
+        appName,
+      );
       return Object.keys(response.properties ?? {}).map((key) => ({ name: key }));
-    }
-    else {
+    } else {
       throw new Error(`Unknown tool: ${name}`);
     }
   }

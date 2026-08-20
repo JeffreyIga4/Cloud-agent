@@ -211,7 +211,12 @@ export class GitHubToolProvider implements ToolProvider {
         description: 'List commits for a GitHub repository',
         inputSchema: listCommitsSchema,
         outputSchema: z.array(
-          z.object({ sha: z.string(), message: z.string(), author: z.string().optional(), timestamp: z.string() }),
+          z.object({
+            sha: z.string(),
+            message: z.string(),
+            author: z.string().optional(),
+            timestamp: z.string(),
+          }),
         ),
       },
       {
