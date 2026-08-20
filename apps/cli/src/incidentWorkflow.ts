@@ -1,4 +1,4 @@
-export { correlateDeploymentWithCommit, buildHealthyReport, buildIncidentReport };
+export { correlateDeploymentWithCommit, buildHealthyReport, buildIncidentReport, printIncidentReport };
 
 function correlateDeploymentWithCommit(
   deploymentTimestamp: string,
@@ -79,4 +79,40 @@ function buildIncidentReport(
         ? 'Consider restarting the App Service'
         : 'Investigate recent commits manually',
   };
+}
+
+function printIncidentReport(report: {
+  application: string;
+  status: string;
+  issue: string;
+  evidence: string[];
+  rootCause: string;
+  confidence: string;
+  recommendedAction: string;
+}) {
+  console.log('Incident Investigation');
+  console.log('=======================');
+  console.log('');
+  console.log('Application:');
+  console.log(report.application);
+  console.log('');
+  console.log('Status:');
+  console.log(report.status);
+  console.log('');
+  console.log('Issue:');
+  console.log(report.issue);
+  console.log('');
+  console.log('Evidence:');
+  for (const line of report.evidence) {
+    console.log(`- ${line}`);
+  }
+  console.log('');
+  console.log('Likely Cause:');
+  console.log(report.rootCause);
+  console.log('');
+  console.log('Confidence:');
+  console.log(report.confidence);
+  console.log('');
+  console.log('Recommended Action:');
+  console.log(report.recommendedAction);
 }
