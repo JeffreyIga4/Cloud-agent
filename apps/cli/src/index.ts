@@ -1,6 +1,6 @@
-import { AgentRuntime, ToolRouter } from '@cloud-agent/agent-core';
+import { AgentRuntime, ToolRouter, LlmAgent } from '@cloud-agent/agent-core';
 import { GitHubToolProvider } from '@cloud-agent/mcp-github';
-import { loadConfig } from '@cloud-agent/shared';
+import { loadConfig, confirmAction } from '@cloud-agent/shared';
 import { Octokit } from 'octokit';
 import { AzureToolProvider } from '@cloud-agent/mcp-azure';
 import { ClientSecretCredential } from '@azure/identity';
@@ -9,12 +9,12 @@ import { SubscriptionClient } from '@azure/arm-resources-subscriptions';
 import { WebSiteManagementClient } from '@azure/arm-appservice';
 import { LogsQueryClient } from '@azure/monitor-query-logs';
 import { Command } from 'commander';
+import Anthropic from '@anthropic-ai/sdk';
 import {
   correlateDeploymentWithCommit,
   buildHealthyReport,
   buildIncidentReport,
   printIncidentReport,
-  confirmAction,
 } from './incidentWorkflow.js';
 
 const config = loadConfig();
@@ -37,6 +37,8 @@ const azureProvider = new AzureToolProvider(
 );
 const router = new ToolRouter([githubProvider, azureProvider]);
 const runtime = new AgentRuntime(router);
+const anthropicClient = new Anthropic({ apiKey: config.ANTHROPIC_API_KEY });
+const llmAgent = new LlmAgent(anthropicClient, router, confirmAction);
 
 const program = new Command();
 
@@ -151,6 +153,29 @@ program
       }
     } catch (error) {
       console.error('Diagnosis failed:', error instanceof Error ? error.message : String(error));
+      process.exitCode = 1;
+    }
+  });
+program
+  .command('investigate')
+  .description('Investigate an application issue using an LLM-driven reasoning loop')
+  .argument('<appName>', 'name of the application to investigate')
+  .requiredOption('--resource-group <resourceGroup>', 'Azure resource group containing the app')
+  .requiredOption('--workspace-id <workspaceId>', 'Application Insights workspace ID')
+  .requiredOption('--owner <owner>', 'GitHub repository owner')
+  .requiredOption('--repo <repo>', 'GitHub repository name')
+  .action(async (appName, options) => {
+    try {
+      const prompt = `Investigate why the application "${appName}" may be experiencing issues. Use resource group "${options.resourceGroup}" 
+      and Application Insights workspace ID "${options.workspaceId}" for Azure tools, and GitHub repository "${options.owner}/${options.repo}" for GitHub tools. 
+      Investigate methodically and summarize the likely root cause, or report that the application appears healthy.`;
+      const result = await llmAgent.investigate(prompt);
+      console.log(result);
+    } catch (error) {
+      console.error(
+        'Investigation failed:',
+        error instanceof Error ? error.message : String(error),
+      );
       process.exitCode = 1;
     }
   });

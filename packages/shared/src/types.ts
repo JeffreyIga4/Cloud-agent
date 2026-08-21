@@ -1,5 +1,4 @@
 import { z } from 'zod';
-export * from './types.js';
 
 export interface Tool {
   name: string;
