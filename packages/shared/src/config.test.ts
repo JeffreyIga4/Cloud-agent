@@ -9,6 +9,7 @@ describe('loadConfig', () => {
     process.env.AZURE_CLIENT_ID = 'test-client-id';
     process.env.AZURE_CLIENT_SECRET = 'test-client-secret';
     process.env.AZURE_SUBSCRIPTION_ID = 'test-subscription-id';
+    process.env.ANTHROPIC_API_KEY = 'test-anthropic-key';
 
     const config = loadConfig();
     expect(config.GITHUB_TOKEN).toBe('test-token');
