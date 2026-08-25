@@ -157,3 +157,7 @@ A few things were evaluated and consciously not built, given limited time agains
 - `github.list_repositories`, `azure.get_app_service`, and `azure.get_metric` — narratively described in the original tool spec but never needed by the actual investigation workflows.
 - API rate-limit/retry handling — not exercised at this project's real usage volume.
 - An HTTP-facing version of `investigate` — would require real authentication in front of an endpoint capable of triggering mutating actions, out of scope for the current deployment.
+
+## License
+ 
+MIT
