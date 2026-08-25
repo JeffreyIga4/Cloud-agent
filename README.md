@@ -304,15 +304,13 @@ instead.
   environment variables is missing from `.env`. Check against
   [Environment variables](#environment-variables) above.
 
-## Known limitations
-
-`github.list_repositories`, `azure.get_app_service`, and `azure.get_metric` were evaluated and
-deliberately not built — narratively described in the original tool spec but never needed by
-either investigation workflow. API rate-limit/retry handling isn't implemented, since it isn't
-exercised at this project's real usage volume. There's no HTTP-facing version of `investigate` —
-that would require real authentication in front of an endpoint capable of triggering mutating
-actions, out of scope for the current deployment.
-
+## Future updates
+API
+rate-limit/retry handling would be worth adding before any higher-traffic use, though it isn't
+exercised at this project's current usage volume. An HTTP-facing version of `investigate` would let
+it be triggered remotely instead of only via CLI or a manually-started Container Apps Job — that
+would need real authentication in front of an endpoint capable of triggering mutating actions,
+which is why it's future work rather than something built alongside the current deployment.
 ## License
 
 MIT — see [`LICENSE`](./LICENSE).
